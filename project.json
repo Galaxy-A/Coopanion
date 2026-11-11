@@ -1,0 +1,15 @@
+{
+  "name": "GhostCompanion",
+  "displayName": "机灵 · AI 伴侣",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-or-later",
+  "runtime": {
+    "name": "Coopanion",
+    "version": "0.2.19",
+    "repository": "https://github.com/Pal-AI-Lab/Coopanion",
+    "asset": "Coopanion-0.2.19-win-x64-portable.zip",
+    "sha256": "ca91b7ab770b8a01c5a04d48809d3bbb46a46be7963a019cf7c40b5ea6f6e684"
+  },
+  "figure": "destiny-ghost",
+  "codexPet": "codex/destiny-ghost/pet.json"
+}

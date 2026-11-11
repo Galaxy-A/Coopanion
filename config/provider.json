@@ -1,0 +1,16 @@
+{
+  "kind": "coo",
+  "baseUrl": "https://api.openai.com/v1",
+  "secret": "GHOST_COMPANION_API_KEY",
+  "spec": {
+    "model": "configure-your-model",
+    "thinking": false,
+    "reasoningEffort": "low",
+    "maxTokens": 2048
+  },
+  "multimodal": false,
+  "pricing": [],
+  "options": {
+    "protocol": "responses"
+  }
+}

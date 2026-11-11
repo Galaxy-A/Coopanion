@@ -2,6 +2,15 @@ node_modules/
 build/
 dist/
 scratch/
-*.log
 promo/assets/bgm.mp3
 packages/cortico-world-desktop-pet/scripts/speech-bank/.cache/
+runtime/
+downloads/
+artifacts/
+figures/destiny-ghost/spritesheet.png
+codex/destiny-ghost/spritesheet.png
+*.log
+*.partial
+.env
+.env.*
+!.env.example

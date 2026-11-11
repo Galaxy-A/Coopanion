@@ -1,0 +1,58 @@
+{
+  "displayName": "机灵",
+  "language": "zh",
+  "activeProvider": "ghost-model",
+  "providerSchemaVersion": 3,
+  "web": {
+    "port": 17826
+  },
+  "companion": {
+    "telemetry": false,
+    "autoUpdate": false,
+    "contextRing": false
+  },
+  "tick": {
+    "intervalMinutes": null
+  },
+  "worlds": {
+    "desktop-pet": {
+      "enabled": true,
+      "port": 7797,
+      "user": "守护者",
+      "window": {
+        "enabled": true,
+        "scale": 1,
+        "glow": 0,
+        "frameRate": 30,
+        "lockFrameRate": true
+      },
+      "roam": "off",
+      "sound": false,
+      "speech": {
+        "enabled": false
+      },
+      "rememberPosition": true,
+      "hoverButtons": "chat",
+      "doubleClickChat": true,
+      "statusBubble": true,
+      "saidBubbles": true,
+      "selfAdjust": "off",
+      "skin": {
+        "figure": "destiny-ghost"
+      },
+      "touch": {
+        "enabled": true,
+        "wakeOn": "none",
+        "wakeKinds": []
+      },
+      "asr": {
+        "enabled": false
+      },
+      "cua": {
+        "enabled": false,
+        "control": false,
+        "permission": "ask-each-turn"
+      }
+    }
+  }
+}

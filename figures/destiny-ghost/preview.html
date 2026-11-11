@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ghost figure</title>
+  <style>
+    :root{color-scheme:light dark;font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:#edf0f2;background:#181a1c}
+    *{box-sizing:border-box}
+    body{margin:0}
+    header{height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 20px;border-bottom:1px solid #3a3d40}
+    h1{margin:0;font-size:17px;font-weight:600}
+    #status{color:#b7c0c7;font-size:13px}
+    #stage{position:relative;height:min(66vh,500px);min-height:260px;overflow:hidden;background:#24272a;border-bottom:1px solid #3a3d40}
+    #body{position:absolute;inset:0}
+    #bubble{position:absolute;max-width:200px;padding:6px 10px;background:#f5f6f7;color:#232629;border:1px solid #aeb6bc;border-radius:6px;transform:translate(-50%,-100%);pointer-events:none;font-size:13px}
+    nav{display:flex;flex-wrap:wrap;gap:8px;padding:18px 20px;max-width:900px}
+    button,label{border:1px solid #555d64;border-radius:5px;padding:7px 12px;color:inherit;background:#30363b;font:inherit}
+    button{cursor:pointer}
+    button[aria-pressed=true]{border-color:#75d2e6;color:#8be2f4}
+    label{display:flex;gap:6px;align-items:center}
+    #error{color:#ffb8b1;padding:0 20px}
+    @media(max-width:600px){header{padding:0 12px}nav{padding:12px;gap:6px}button,label{padding:7px 9px}#bubble{max-width:150px}}
+  </style>
+</head>
+<body>
+  <header><h1>机灵 · Ghost</h1><output id="status">载入中</output></header>
+  <main>
+    <div id="stage"><div id="body"></div><div id="bubble">守护者，我在。</div></div>
+    <nav aria-label="动作">
+      <button data-word="idle">待机</button><button data-word="greet">招呼</button>
+      <button data-word="scan">扫描</button><button data-word="inspect">检查</button>
+      <button data-word="wait">等待</button><button data-word="error">出错</button>
+      <button data-word="jump">跳起</button><button data-word="move">轻移</button>
+      <button data-word="look">看向鼠标</button>
+      <label><input type="checkbox" id="thinking">思考</label>
+      <label><input type="checkbox" id="listening">倾听</label>
+    </nav>
+    <div id="error" role="alert"></div>
+  </main>
+  <script type="module">
+    import { createGhostBody } from './figure.js';
+    const stage=document.querySelector('#stage'),root=document.querySelector('#body');
+    const status=document.querySelector('#status'),bubble=document.querySelector('#bubble');
+    let body=null,previous=performance.now();
+    function bounds(){return{W:stage.clientWidth,H:stage.clientHeight,floorY:stage.clientHeight-18,S:.58};}
+    try{
+      body=await createGhostBody(new URL('./',location.href),{
+        asset:path=>new URL(path,location.href),
+        host:{root,bounds,start:{x:stage.clientWidth/2},emit:(kind,detail)=>{stage.dataset.event=kind;stage.dataset.word=detail.word||'';}}
+      });
+      window.ghostFigure=body;
+      document.querySelectorAll('[data-word]').forEach(button=>button.onclick=()=>body.do(button.dataset.word));
+      for(const id of ['thinking','listening'])document.querySelector('#'+id).onchange=event=>body.set({[id]:event.target.checked});
+      stage.onpointerdown=event=>{stage.setPointerCapture(event.pointerId);body.pointer('down',point(event));};
+      stage.onpointermove=event=>body.pointer('move',point(event));
+      stage.onpointerup=event=>body.pointer('up',point(event));
+      stage.onpointercancel=event=>body.pointer('cancel',point(event));
+      stage.onpointerleave=event=>body.pointer('leave',point(event));
+      new ResizeObserver(()=>body.resize()).observe(stage);
+      requestAnimationFrame(tick);
+    }catch(error){document.querySelector('#error').textContent=String(error.message||error);status.textContent='载入失败';}
+    function point(event){const box=stage.getBoundingClientRect();return{x:event.clientX-box.left,y:event.clientY-box.top,t:performance.now()};}
+    function tick(now){
+      body.step(Math.max(0,(now-previous)/1000),!document.hidden);previous=now;
+      const state=body.snapshot(),layout=body.layout();
+      status.textContent=`${layout.mode} · ${state.row}:${state.frame}`;
+      bubble.style.left=layout.bubble.x+'px';bubble.style.top=layout.bubble.y+'px';
+      document.querySelectorAll('[data-word]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.word===layout.mode));
+      requestAnimationFrame(tick);
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,13 @@
 <!-- Owner: app/main.cjs, core/companion.ts, console/index.ts. -->
+# GhostCompanion 定制 fork
+
+本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
+保留上游提交历史，并增加 Codex 活动通知、状态动画和机灵形象适配。
+定制版的安装、使用、功能边界及素材说明见 [GhostCompanion README](README.md)。
+公开仓库不附带私人本地使用的机灵图集。
+
+## 上游 Coopanion 说明
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
@@ -7,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> ｜
+  <a href="README.md">GhostCompanion 定制说明</a> ｜
   简体中文
 </p>
 

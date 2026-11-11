@@ -1,0 +1,102 @@
+{
+  "manifest": 2,
+  "api": 2,
+  "id": "destiny-ghost",
+  "version": "1.0.0",
+  "name": {
+    "zh": "机灵 · Ghost",
+    "en": "Ghost"
+  },
+  "about": {
+    "zh": "白色像素壳体、红色内环、青色独眼的悬浮机灵。保留 v9 前后壳开合、转身展壳、侧身扫描、关束收壳和回正动作。扫描是检查信息的动作，不表示真的读取了屏幕或文件。",
+    "en": "A floating pixel Ghost with a white shell, red inner housing and cyan eye. Its v9 animation opens the shell, turns sideways, scans, closes the beam and shell, then returns to the front. A scan animation alone does not mean that the computer or any file was inspected."
+  },
+  "author": "GhostCompanion contributors",
+  "license": "AGPL-3.0-or-later",
+  "credits": [
+    {
+      "role": "Pixel reference",
+      "name": "lascap / @pixearl1"
+    },
+    {
+      "role": "Destiny character rights",
+      "name": "Bungie"
+    }
+  ],
+  "entry": "figure.js",
+  "export": "createGhostBody",
+  "thumb": "spritesheet.png",
+  "effects": {
+    "reach": 0
+  },
+  "can": {
+    "walk": true
+  },
+  "vocab": [
+    {
+      "id": "idle",
+      "kind": "motion",
+      "names": { "zh": ["待机", "回正"] },
+      "about": { "zh": "回正，轻轻开合壳体并保持悬浮。", "en": "Return to the front and hover with a gently opening shell." },
+      "seconds": 0.2,
+      "lasting": true
+    },
+    {
+      "id": "greet",
+      "kind": "motion",
+      "names": { "zh": ["招呼", "你好"], "en": ["hello"] },
+      "about": { "zh": "轻快地招呼，然后回到待机。", "en": "A short greeting, then return to idle." },
+      "seconds": 2.1
+    },
+    {
+      "id": "scan",
+      "kind": "motion",
+      "names": { "zh": ["扫描"] },
+      "about": { "zh": "转身开壳、侧身发束扫动、关束收壳和回正，完整播放三轮。只表达检查的姿态，不会自行读取屏幕。", "en": "Play three complete side-facing scan cycles, including opening and closing. This is an animation, not screen access." },
+      "seconds": 2.46
+    },
+    {
+      "id": "inspect",
+      "kind": "motion",
+      "names": { "zh": ["检查", "观察"] },
+      "about": { "zh": "好奇地检查周围，然后回到待机。", "en": "A curious inspection, then return to idle." },
+      "seconds": 3.09
+    },
+    {
+      "id": "wait",
+      "kind": "motion",
+      "names": { "zh": ["等待", "等回应"] },
+      "about": { "zh": "安静等待回应，然后回到待机。", "en": "Wait quietly for a response, then return to idle." },
+      "seconds": 3.03
+    },
+    {
+      "id": "error",
+      "kind": "expression",
+      "names": { "zh": ["出错", "困惑"], "en": ["confused"] },
+      "about": { "zh": "短暂表现出困惑，然后回到待机。", "en": "A brief confused reaction, then return to idle." },
+      "seconds": 3.66
+    },
+    {
+      "id": "jump",
+      "kind": "motion",
+      "names": { "zh": ["跳起", "开心"] },
+      "about": { "zh": "轻快地上下跳起，然后回到待机。", "en": "An energetic bob, then return to idle." },
+      "seconds": 2.52
+    },
+    {
+      "id": "move",
+      "kind": "motion",
+      "names": { "zh": ["轻移", "移动"] },
+      "about": { "zh": "向当前朝向轻移一小段距离。指定位置请使用 pet_move_to。", "en": "Drift a short distance in the current direction. Use pet_move_to for a specific destination." },
+      "seconds": 1.2
+    },
+    {
+      "id": "look",
+      "kind": "motion",
+      "names": { "zh": ["看鼠标", "注视"] },
+      "about": { "zh": "使用十六个方向的像素姿态看向鼠标，保持到下一个动作。", "en": "Watch the pointer with sixteen directional poses until the next action." },
+      "seconds": 0.2,
+      "lasting": true
+    }
+  ]
+}
