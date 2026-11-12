@@ -40,6 +40,7 @@ import { CUA_GROUP, cuaSection } from '../cua/index.ts';
 import { announceName } from '../bot-name.ts';
 import { scaleSlider } from './scale-slider.ts';
 import { S } from './strings.ts';
+import { icon } from '../../base/ui/icons.ts';
 
 const GROUP = 'world:desktop-pet';
 const SOUND_GROUP = 'world:desktop-pet:sound';
@@ -395,6 +396,65 @@ async function mount(ctx: PageContext): Promise<void> {
   const launchAtLogin = ui.checkbox(S.launchAtLogin, { checked: loginItem?.get() ?? false, onChange: (on) => loginItem?.set(on) });
   const launchAtLoginRow = row(S.launchAtLoginLabel, launchAtLogin.el);
   launchAtLoginRow.hidden = !loginItem;
+  // The data directory is controlled by the Electron launcher. Browser previews and console tests do not expose it.
+  const dataLocation = root.ownerDocument.defaultView?.coopanionWindow?.dataLocation;
+  const dataPath = ui.input({ cls: 'mono' });
+  dataPath.readOnly = true;
+  dataPath.spellcheck = false;
+  const dataChoose = ui.button('', { size: 'sm' });
+  dataChoose.classList.add('pathpick');
+  dataChoose.append(icon(root.ownerDocument, 'folder-open'));
+  dataChoose.title = S.dataLocationChoose;
+  dataChoose.setAttribute('aria-label', S.dataLocationChoose);
+  const dataControls = ui.h('div', 'pathfield-controls');
+  dataControls.append(dataPath, dataChoose);
+  const dataDisk = ui.h('span', 'pathrecommended');
+  const dataMeta = ui.h('div', 'pathfield-meta');
+  const dataCopy = ui.copyButton(() => dataPath.value, { label: S.dataLocationCopy, size: 'sm' });
+  dataMeta.append(dataDisk, dataCopy);
+  const dataBox = ui.h('div', 'pathfield');
+  dataBox.append(dataControls, dataMeta);
+  const dataStatus = ui.msgline('');
+  dataStatus.classList.add('data-location-status');
+  const dataLocationRow = row(S.dataLocationLabel, dataBox, S.dataLocationHint);
+  dataLocationRow.querySelector('.companion-control')?.append(dataStatus);
+  dataLocationRow.hidden = !dataLocation;
+  let dataBusy = false;
+  const refreshDataLocation = async (): Promise<void> => {
+    if (!dataLocation) return;
+    try {
+      const current = await dataLocation.get();
+      if (signal.aborted) return;
+      dataPath.value = current.path;
+      dataDisk.textContent = S.dataLocationDisk(current.drive);
+      dataChoose.disabled = !current.canMove || dataBusy;
+    } catch (err) {
+      if (!signal.aborted) problem(dataChoose, S.dataLocationFailed(errText(err)));
+    }
+  };
+  dataChoose.addEventListener('click', () => void (async () => {
+    if (!dataLocation || dataBusy) return;
+    const destination = await dataLocation.choose();
+    if (!destination || signal.aborted) return;
+    if (!await ui.confirm({
+      title: S.dataLocationConfirmTitle,
+      body: S.dataLocationConfirmBody(destination),
+      danger: true,
+    }) || signal.aborted) return;
+    dataBusy = true;
+    dataChoose.disabled = true;
+    dataStatus.textContent = S.dataLocationMoving;
+    dataStatus.classList.remove('bad');
+    try {
+      await dataLocation.move(destination);
+      dataStatus.textContent = S.dataLocationRestarting;
+    } catch (err) {
+      dataBusy = false;
+      dataStatus.textContent = '';
+      problem(dataChoose, S.dataLocationFailed(errText(err)));
+      await refreshDataLocation();
+    }
+  })(), { signal });
 
   // sections: general, how Coo behaves and is reached, how it shows on the screen, sounds, computer use;
   // every row names its setting on the left, except one that only refines the row above it
@@ -405,6 +465,7 @@ async function mount(ctx: PageContext): Promise<void> {
     launchAtLoginRow,
     autoUpdateRow,
     row(S.statsLabel, statsBox, S.statsHint),
+    dataLocationRow,
   );
   const behavior = ui.sheet({ title: S.groupBehavior });
   behavior.body.append(
@@ -689,6 +750,7 @@ async function mount(ctx: PageContext): Promise<void> {
   };
 
   await refreshValues();
+  await refreshDataLocation();
   ctx.lifecycle.interval(() => void refreshValues(), 3000);
 }
 

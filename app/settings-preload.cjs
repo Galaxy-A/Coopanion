@@ -4,7 +4,8 @@
  * language, written before each page load.
  *
  * window.coopanionWindow supplies the platform, sends the page palette to the native window controls and,
- * in a packaged app, reads and sets the start at login.
+ * in a packaged app, reads and sets the start at login. It also owns the native data-directory picker
+ * and starts a full-data migration followed by an app restart.
  *
  * In a build that updates itself (app/updater.cjs), the page also gets `window.coopanionUpdate`: the
  * updater's last step and its later ones, which the version line shows (console/features/release.ts).
@@ -14,6 +15,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('coopanionWindow', {
   platform: process.platform,
   setTheme: (theme) => ipcRenderer.send('settings:theme', theme),
+  dataLocation: {
+    get: () => ipcRenderer.invoke('settings:data-location', { action: 'get' }),
+    choose: () => ipcRenderer.invoke('settings:data-location', { action: 'choose' }),
+    move: (path) => ipcRenderer.invoke('settings:data-location', { action: 'move', path }),
+  },
   ...ipcRenderer.sendSync('settings:login-item') === null ? {} : {
     loginItem: {
       get: () => ipcRenderer.sendSync('settings:login-item'),

@@ -14,7 +14,7 @@
  *
  * Run: `pnpm run build:cortico`. Idempotent; the previous output is replaced.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -22,7 +22,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const VENDOR = join(ROOT, 'vendor', 'cortico');
 const OUT = join(ROOT, 'build', 'cortico');
-const WINDOW = join(ROOT, 'console');
 const WINDOW_OUT = join(ROOT, 'build', 'console');
 
 if (!existsSync(join(VENDOR, 'src', 'core'))) {
@@ -91,41 +90,7 @@ await esbuild.build({
   logLevel: 'warning',
 });
 
-// the settings window: one ES module bundle (the CSS it imports becomes index.css), its stylesheet, the page.
-// The version and the build's channel (COOPANION_CHANNEL as scripts/pack.ts writes it into the app, github
-// by default) go in for the release check in the title bar.
-const { version } = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version: string };
-rmSync(WINDOW_OUT, { recursive: true, force: true });
-mkdirSync(WINDOW_OUT, { recursive: true });
-await esbuild.build({
-  entryPoints: [join(WINDOW, 'index.ts')],
-  outdir: WINDOW_OUT,
-  entryNames: 'index',
-  bundle: true,
-  format: 'esm',
-  target: 'es2022',
-  platform: 'browser',
-  minify: true,
-  sourcemap: true,
-  jsx: 'automatic',
-  define: {
-    COOPANION_VERSION: JSON.stringify(version),
-    COOPANION_CHANNEL: JSON.stringify(process.env.COOPANION_CHANNEL === 'steam' ? 'steam' : 'github'),
-    'process.env.NODE_ENV': '"production"',
-  },
-  logLevel: 'warning',
-});
-cpSync(join(WINDOW, 'index.html'), join(WINDOW_OUT, 'index.html'));
-const slash = (path: string) => relative(WINDOW_OUT, path).split(sep).join('/');
-const windowEntry = join(WINDOW_OUT, 'tailwind.entry.css');
-writeFileSync(windowEntry, [
-  ...['styles.css', 'features/home/home.css', 'features/chat/chat.css', 'companion.css'].map((f) => `@import "${slash(join(WINDOW, f))}";`),
-  `@source "${slash(WINDOW)}";`,
-  `@source "${slash(join(pet, 'src', 'webui'))}";`,
-  '',
-].join('\n'));
-const windowCss = spawnSync(process.execPath, [cli, '-i', windowEntry, '-o', join(WINDOW_OUT, 'styles.css'), '--minify'], { cwd: WINDOW_OUT, stdio: 'inherit' });
-if (windowCss.status !== 0) process.exit(windowCss.status ?? 1);
-rmSync(windowEntry);
+const settings = spawnSync(process.execPath, [join(ROOT, 'scripts', 'build-console.mjs')], { cwd: ROOT, stdio: 'inherit' });
+if (settings.status !== 0) process.exit(settings.status ?? 1);
 
 console.log(`stage done in ${((Date.now() - t0) / 1000).toFixed(1)} s → ${relative(ROOT, OUT)}, ${relative(ROOT, WINDOW_OUT)}`);

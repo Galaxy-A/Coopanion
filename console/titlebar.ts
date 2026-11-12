@@ -14,6 +14,12 @@ declare global {
       setTheme(theme: { color: string; symbolColor: string }): void;
       /** Start at login; only in a packaged app. */
       loginItem?: { get(): boolean; set(on: boolean): void };
+      /** The launcher's data directory controls; absent in a browser or console test. */
+      dataLocation?: {
+        get(): Promise<{ path: string; drive: string; canMove: boolean }>;
+        choose(): Promise<string | null>;
+        move(path: string): Promise<{ restarting: boolean; path: string }>;
+      };
     };
   }
 }

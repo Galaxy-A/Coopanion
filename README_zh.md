@@ -1,10 +1,40 @@
-<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts. -->
+<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs. -->
 # GhostCompanion 定制 fork
 
 本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
 保留上游提交历史，并增加 Codex 活动通知、状态动画和机灵形象适配。
 定制版的安装、使用、功能边界及素材说明见 [GhostCompanion README](README.md)。
 公开仓库不附带私人本地使用的机灵图集。
+
+## 数据目录迁移
+
+Coopanion 的设置、聊天记录、记忆、语音识别模型、扩展和桥接状态可以放在
+其他磁盘。打开设置窗口，在「习惯 → 通用 → 数据存放位置」可以查看完整路径和所在
+磁盘，点击文件夹按钮即可选择目标位置。确认后，应用会停止 Core，复制并校验完整
+数据，删除旧目录并自动重新启动。
+
+也可以先从托盘退出程序，再双击 `Manage-GhostCompanionData.cmd`，或运行：
+
+```powershell
+# 查看当前路径和所在磁盘
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -Show
+
+# 选择一个空文件夹，迁移后删除旧目录并重新启动
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -Choose -Restart
+
+# 直接指定新目录
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -MoveTo D:\GhostCompanionData -Restart
+```
+
+迁移完成后，启动器会把整个数据根目录切换到新位置；旧目录在复制和完整性检查
+通过后自动删除。只有一个很小的路径记录仍留在
+`%LOCALAPPDATA%\GhostCompanion-data-location.json`，用于让启动器找到新磁盘。
+目标目录需要为空或尚不存在。移动硬盘或网络位置不可用时，启动会报错，不会
+自动在 C 盘重新创建数据。
+
+迁移会更新数据目录内部的链接和已知 GPT-SoVITS 路径，保留外部链接目标。
+如果 Equalizer APO 注册安装在数据目录内，请先卸载并重装到该目录外，
+重新配置麦克风发送，再重试迁移。
 
 ## 模型供应商
 
@@ -21,6 +51,9 @@ Anthropic Messages 和 Gemini。API 地址会按所选协议移除完整请求�
 应用页面的 API Key 由 Cortico 存在数据目录的
 `home\providers\<供应商名称>\.env` 中，值为明文。命令行备选
 `Configure-Model.cmd` 使用 Windows 当前用户 DPAPI 加密，先退出托盘再配置。
+更新后退出托盘并重新运行 `Start-GhostCompanion.cmd`，启动器会先构建当前源码的
+设置窗口，再同步应用、设置窗口和供应商实现。缺少源码构建依赖时，使用内置 pnpm
+按锁文件安装；首次启动需要联网和额外磁盘空间，无需另行安装 Node 或 pnpm。
 
 ## 上游 Coopanion 说明
 

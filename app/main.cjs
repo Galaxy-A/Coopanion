@@ -42,8 +42,8 @@ const { app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, nativeIma
 const { spawn } = require('node:child_process');
 const http = require('node:http');
 const { Readable } = require('node:stream');
-const { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, rmSync, symlinkSync, writeFileSync } = require('node:fs');
-const { delimiter, dirname, extname, join, resolve, sep } = require('node:path');
+const { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, rmSync, symlinkSync, writeFileSync } = require('node:fs');
+const { delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep } = require('node:path');
 const { dataDirIn, locateData, readRecord, writeRecord } = require('./data-dir.cjs');
 const { readTextFile } = require('./read-text.cjs');
 
@@ -78,6 +78,16 @@ const BUILD = JSON.parse(readTextFile(join(APP_ROOT, 'package.json'))).coopanion
 const STEAM = BUILD.channel === 'steam';
 const PORTABLE = BUILD.channel === 'portable';
 const PET_HOST = process.argv.includes('--pet-host');
+const argValue = (name) => {
+  const prefix = `--${name}=`;
+  const value = process.argv.find((arg) => arg.startsWith(prefix));
+  return value ? value.slice(prefix.length) : '';
+};
+/** A custom launcher can persist a data directory outside Coopanion's own record. */
+const CUSTOM_DATA_RECORD = process.env.GHOST_COMPANION_DATA_POINTER ? resolve(process.env.GHOST_COMPANION_DATA_POINTER) : null;
+const MOVE_DATA_TO = argValue('move-data-to');
+const MOVE_DATA_FROM = argValue('move-data-from');
+const MOVING_DATA = !PET_HOST && !!MOVE_DATA_TO;
 /** The Windows installed build, whose data directory data-dir.cjs finds from the program's directory. */
 const INSTALLED = app.isPackaged && process.platform === 'win32' && !STEAM && !PORTABLE && !process.env.CORTICO_COMPANION_DATA;
 const PROGRAM_DIR = dirname(process.execPath);
@@ -202,13 +212,133 @@ function restoreStrandedData() {
   appendFileSync(join(DATA, 'logs', 'data-restore.log'), `${new Date().toISOString()} ${line}\n`);
   return false;
 }
-const askStranded = INSTALLED && !PET_HOST && DATA === BESIDE && restoreStrandedData();
+const askStranded = INSTALLED && !PET_HOST && !MOVING_DATA && DATA === BESIDE && restoreStrandedData();
 
 // before anything asks Electron for a path: the single-instance lock and the profile live in userData
-app.setPath('userData', DATA);
-app.setPath('crashDumps', join(DATA, 'Crashpad'));
-process.env.TEMP = process.env.TMP = process.env.TMPDIR = join(DATA, 'tmp');
-mkdirSync(process.env.TEMP, { recursive: true });
+if (MOVING_DATA) {
+  // The old process has already stopped before this process is launched. Keep this helper away from
+  // the source profile so Chromium cannot hold a file that the copy needs.
+  const moveProfile = join(app.getPath('temp'), `Coopanion-data-move-${process.pid}`);
+  app.setPath('userData', moveProfile);
+  app.setPath('crashDumps', join(moveProfile, 'Crashpad'));
+  process.env.TEMP = process.env.TMP = process.env.TMPDIR = join(moveProfile, 'tmp');
+  mkdirSync(process.env.TEMP, { recursive: true });
+} else {
+  app.setPath('userData', DATA);
+  app.setPath('crashDumps', join(DATA, 'Crashpad'));
+  process.env.TEMP = process.env.TMP = process.env.TMPDIR = join(DATA, 'tmp');
+  mkdirSync(process.env.TEMP, { recursive: true });
+}
+
+function pathInside(child, parent) {
+  const suffix = relative(resolve(parent), resolve(child));
+  return suffix !== '' && !suffix.startsWith('..') && !isAbsolute(suffix);
+}
+
+function dataRootValid(data) {
+  return existsSync(join(data, 'home', 'companion', 'config.json'));
+}
+
+function validateDataDestination(source, destination) {
+  const from = resolve(source);
+  const to = resolve(destination);
+  if (!destination || !to) throw new Error('请选择新的数据目录。');
+  if (from.toLowerCase() === to.toLowerCase()) throw new Error('新旧数据目录相同，不需要迁移。');
+  if (pathInside(to, from)) throw new Error('新数据目录不能放在旧数据目录里面。');
+  if (!dataRootValid(from)) throw new Error(`当前数据目录不完整，无法迁移：${from}`);
+  if (existsSync(join(to, 'home', 'companion', 'config.json'))) {
+    throw new Error(`新数据目录已经包含 Coopanion 数据，拒绝覆盖：${to}`);
+  }
+  if (existsSync(to) && readdirSync(to, { withFileTypes: true }).length > 0) {
+    throw new Error(`新数据目录必须为空：${to}`);
+  }
+  return { from, to };
+}
+
+function writeCustomDataRecord(data) {
+  if (!CUSTOM_DATA_RECORD) return;
+  mkdirSync(dirname(CUSTOM_DATA_RECORD), { recursive: true });
+  writeFileSync(CUSTOM_DATA_RECORD, `${JSON.stringify({
+    version: 1,
+    dataDirectory: data,
+    updatedAt: new Date().toISOString(),
+  }, null, 2)}\n`);
+}
+
+function writeManagedDataLocation(data) {
+  writeCustomDataRecord(data);
+  if (INSTALLED && DATA_RECORD) {
+    writeRecord(DATA_RECORD, { data, program: PROGRAM_DIR, startedAt: new Date().toISOString() });
+  }
+}
+
+function cleanMoveArguments() {
+  return process.argv.slice(1).filter((arg) => !arg.startsWith('--move-data-to=') && !arg.startsWith('--move-data-from='));
+}
+
+function snapshotDataLocationRecords() {
+  return [CUSTOM_DATA_RECORD, INSTALLED && DATA_RECORD]
+    .filter(Boolean)
+    .map((file) => {
+      const exists = existsSync(file);
+      if (!exists) return { file, exists: false, content: null };
+      return { file, exists: true, content: readFileSync(file) };
+    });
+}
+
+function restoreDataLocationRecords(snapshots) {
+  const errors = [];
+  for (const snapshot of snapshots) {
+    try {
+      if (snapshot.exists) writeFileSync(snapshot.file, snapshot.content);
+      else rmSync(snapshot.file, { force: true });
+    } catch (error) {
+      errors.push(`${snapshot.file}: ${error?.message ?? error}`);
+    }
+  }
+  return errors;
+}
+
+function moveDataBeforeRestart() {
+  const { from, to } = validateDataDestination(MOVE_DATA_FROM || DATA, MOVE_DATA_TO);
+  const records = snapshotDataLocationRecords();
+  const { cleanupError } = require('./data-move.cjs').migrate({
+    source: from,
+    destination: to,
+    commit(data) {
+      try { writeManagedDataLocation(data); }
+      catch (error) {
+        const errors = restoreDataLocationRecords(records);
+        if (errors.length) {
+          const failure = new Error(`${error.message}; ${errors.join('; ')}`);
+          failure.preserveDestination = true;
+          throw failure;
+        }
+        throw error;
+      }
+    },
+  });
+  if (cleanupError) dialog.showErrorBox('Coopanion', cleanupError);
+}
+
+if (MOVING_DATA) {
+  app.whenReady().then(() => {
+    try {
+      moveDataBeforeRestart();
+      process.env.CORTICO_COMPANION_DATA = resolve(MOVE_DATA_TO);
+      app.relaunch({ args: cleanMoveArguments() });
+      app.exit(0);
+    } catch (error) {
+      dialog.showErrorBox('Coopanion', String(error?.message ?? error));
+      app.relaunch({ args: cleanMoveArguments() });
+      app.exit(1);
+    }
+  }).catch((error) => {
+    dialog.showErrorBox('Coopanion', String(error?.message ?? error));
+    app.exit(1);
+  });
+  return;
+}
 
 /* ---------- pet window mode ---------- */
 if (PET_HOST) {
@@ -754,6 +884,45 @@ ipcMain.on('settings:login-item', (e, on) => {
   e.returnValue = loginItem.get();
 });
 ipcMain.on('settings:update', (e) => { e.returnValue = { auto: SELF_UPDATE, step: updateLine() }; });
+
+ipcMain.handle('settings:data-location', async (_event, request = {}) => {
+  const action = typeof request?.action === 'string' ? request.action : 'get';
+  if (action === 'get') {
+    const data = resolve(DATA);
+    return {
+      path: data,
+      drive: WIN ? data.slice(0, 2) : data.startsWith('/') ? '/' : '',
+      pointer: CUSTOM_DATA_RECORD || DATA_RECORD,
+      canMove: !PET_HOST && dataRootValid(data) && !quitting,
+    };
+  }
+  if (action === 'choose') {
+    const picked = await dialog.showOpenDialog(settings ?? undefined, {
+      title: T().dataChooseTitle,
+      defaultPath: dirname(DATA),
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    return picked.canceled ? null : picked.filePaths[0] ?? null;
+  }
+  if (action !== 'move') throw new Error(`Unknown data location action: ${action}`);
+  if (quitting) throw new Error('Coopanion 正在退出。');
+  const destination = String(request?.path ?? '').trim();
+  const { to } = validateDataDestination(DATA, destination);
+  const args = [...cleanMoveArguments(), `--move-data-from=${resolve(DATA)}`, `--move-data-to=${to}`];
+  quitting = true;
+  tray?.destroy();
+  tray = null;
+  settings?.hide();
+  void core.stop().then(() => {
+    app.relaunch({ args });
+    app.exit(0);
+  }).catch((error) => {
+    quitting = false;
+    settings?.show();
+    dialog.showErrorBox('Coopanion', String(error?.message ?? error));
+  });
+  return { restarting: true, path: to };
+});
 
 app.whenReady().then(() => {
   const settingsSession = session.fromPartition(SETTINGS_PARTITION);

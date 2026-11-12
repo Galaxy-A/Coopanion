@@ -1,4 +1,4 @@
-<!-- Owner: scripts/Start-Companion.ps1, integration/codex-bridge.mjs, integration/codex-view.js, figures/destiny-ghost/figure.js, console/features/connections/index.ts. -->
+<!-- Owner: scripts/Start-Companion.ps1, integration/codex-bridge.mjs, integration/codex-view.js, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs. -->
 # GhostCompanion
 
 GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
@@ -68,17 +68,49 @@ Windows 当前用户 DPAPI 加密保存，启动时仅传给应用子进程，�
 命令行的 `-NoApiKey` 仅适用于本机回环地址上的 Responses／Chat 服务；
 Anthropic／Gemini 协议仍需密钥。
 
+更新后先从托盘退出应用，再双击 `Start-GhostCompanion.cmd`。启动器会先构建
+当前源码的设置窗口，再同步本项目的应用文件、设置窗口和供应商实现。
+缺少源码构建依赖时，使用内置 pnpm 按锁文件安装；首次启动需要联网和额外
+磁盘空间，无需另行安装 Node 或 pnpm。
+
 ## 数据
 
-应用数据位于 `%LOCALAPPDATA%\GhostCompanion`。
+应用数据默认位于 `%LOCALAPPDATA%\GhostCompanion`。
 模型配置、对话历史、工作区记忆和 Chromium 配置均在这一独立目录。
 对话历史与记忆功能复用上游实现，不另建一套 SQLite 格式。
 原始对话事件为 `home\companion\data\runs\<run-id>\events.jsonl`，
 聊天界面可以加载此前运行中的历史。
 首次初始化后，启动脚本保留用户已经修改的配置和人设。
 
+也可以在设置窗口的「习惯 → 通用 → 数据存放位置」查看完整路径和所在磁盘。
+点击文件夹按钮选择目标目录并确认迁移；应用会先停止 Core，复制并校验完整数据，
+然后自动删除旧目录并重新启动。目标目录必须为空或尚不存在。
+
+数据目录可以迁移到其他磁盘。先从托盘退出 Coopanion，再双击
+`Manage-GhostCompanionData.cmd`：
+
+```powershell
+# 查看当前数据目录和所在磁盘
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -Show
+
+# 打开文件夹选择器，复制完整数据并删除旧目录，最后重新启动
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -Choose -Restart
+
+# 直接指定新数据目录
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps1 -MoveTo D:\GhostCompanionData -Restart
+```
+
+迁移包含 `home`、`home\models`、`extensions`、日志、Chromium 配置和桥接状态。
+迁移成功并通过完整性检查后，旧数据目录会自动删除；新位置由一个很小的路径记录
+保存在 `%LOCALAPPDATA%\GhostCompanion-data-location.json`，下次启动自动使用新盘。
+移动硬盘或网络位置未连接时，启动会明确报错，不会静默新建一份 C 盘数据。
+
+迁移会更新数据目录内部的链接和已知 GPT-SoVITS 路径，保留外部链接目标。
+如果 Equalizer APO 注册安装在数据目录内，请先卸载并重装到该目录外，
+重新配置麦克风发送，再重试迁移。
+
 默认使用中文与机灵人设；称呼用户为“守护者”。
-首版默认关闭语音输入、本地语音模型自动下载、主动漫游和电脑控制，
+默认关闭语音输入、本地语音模型自动下载、主动漫游和电脑控制，
 不自动设为开机启动。模型未配置时，不会伪造 AI 回答。
 无有效模型连接时，界面可以保留待发送消息；这不代表消息已经送达模型，
 也不等于完成了一轮 AI 对话。
@@ -176,9 +208,10 @@ Codex 消息和 Coopanion 聊天共同使用这个桌宠窗口。
 ```text
 GhostCompanion/
   Start-GhostCompanion.cmd
+  Manage-GhostCompanionData.cmd
   Configure-Model.cmd
   project.json
-  scripts/                 下载、初始化、启动和模型配置
+  scripts/                 数据迁移、运行时同步、下载、初始化、启动和模型配置
   integration/             Codex 只读桥、显示器与可重现的宿主适配器
   config/                  首次启动模板与机灵人设
   figures/destiny-ghost/   Coopanion 形象适配

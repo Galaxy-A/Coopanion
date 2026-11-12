@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$DataDir = (Join-Path $env:LOCALAPPDATA 'GhostCompanion'),
+    [string]$DataDir = '',
     [switch]$NoCodexBridge,
     [switch]$Inspect,
     [ValidateRange(0, 65535)]
@@ -8,9 +8,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$dataLocation = Join-Path $PSScriptRoot 'Data-Location.ps1'
+. $dataLocation
 $project = Split-Path -Parent $PSScriptRoot
 $exe = Join-Path $project 'runtime\Coopanion-0.2.19\Coopanion.exe'
-$DataDir = [IO.Path]::GetFullPath($DataDir)
+$DataDir = Resolve-GhostCompanionDataDir $DataDir
+$dataPointer = Get-GhostCompanionDataPointerPath
 if ($InspectPort -gt 0 -and $InspectPort -lt 1024) {
     throw 'InspectPort must be zero (automatic) or at least 1024.'
 }
@@ -18,17 +21,26 @@ if ($InspectPort -gt 0 -and $InspectPort -lt 1024) {
 if (-not (Test-Path -LiteralPath $exe)) {
     & (Join-Path $PSScriptRoot 'Install-Runtime.ps1')
 }
+$running = @(Get-CimInstance Win32_Process -Filter "Name = 'Coopanion.exe'" | Where-Object {
+    $_.ExecutablePath -eq [IO.Path]::GetFullPath($exe) -and
+    $_.CommandLine -notmatch '--type=|--import|--pet-url=|host[\\/]electron-main'
+})
+if ($running.Count -gt 0) {
+    throw "Coopanion is already running (process $($running[0].ProcessId)). Exit it from the tray before restarting."
+}
+& (Join-Path $PSScriptRoot 'Sync-GhostCompanionRuntime.ps1')
 if (-not $NoCodexBridge) { & (Join-Path $PSScriptRoot 'Install-CodexBridge.ps1') }
 & (Join-Path $PSScriptRoot 'Initialize-Companion.ps1') -DataDir $DataDir | Out-Null
 $modelEnvironment = & (Join-Path $PSScriptRoot 'Get-ModelEnvironment.ps1') -DataDir $DataDir
 
-$environmentKeys = @('CORTICO_COMPANION_DATA', 'COOPANION_PACK_ROOTS', 'GHOST_CODEX_BRIDGE_MODULE', 'GHOST_PET_INSPECT_PORT') + @($modelEnvironment.Keys)
+$environmentKeys = @('CORTICO_COMPANION_DATA', 'GHOST_COMPANION_DATA_POINTER', 'COOPANION_PACK_ROOTS', 'GHOST_CODEX_BRIDGE_MODULE', 'GHOST_PET_INSPECT_PORT') + @($modelEnvironment.Keys)
 $before = @{}
 foreach ($key in $environmentKeys) {
     $before[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
 }
 try {
     $env:CORTICO_COMPANION_DATA = $DataDir
+    $env:GHOST_COMPANION_DATA_POINTER = $dataPointer
     $env:COOPANION_PACK_ROOTS = Join-Path $project 'figures'
     $env:GHOST_CODEX_BRIDGE_MODULE = if ($NoCodexBridge) { '' } else {
         ([Uri](Join-Path $project 'integration\codex-bridge.mjs')).AbsoluteUri
@@ -52,6 +64,7 @@ try {
         FilePath = $exe
         WorkingDirectory = (Split-Path -Parent $exe)
         PassThru = $true
+        WindowStyle = 'Hidden'
     }
     if ($arguments.Count -gt 0) { $options.ArgumentList = $arguments }
     $process = Start-Process @options
@@ -61,7 +74,7 @@ try {
     $artifacts = Join-Path $project 'artifacts'
     New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
     $receipt = @{
-        project = 'GhostCompanion'
+        project = 'Coopanion'
         pid = $process.Id
         startedAt = [DateTime]::UtcNow.ToString('o')
         dataDirectory = $env:CORTICO_COMPANION_DATA
@@ -75,7 +88,7 @@ try {
         $receipt,
         (New-Object Text.UTF8Encoding $false)
     )
-    Write-Host "GhostCompanion started. Process: $($process.Id)"
+    Write-Host "Coopanion started. Process: $($process.Id)"
     Write-Host "Data: $($env:CORTICO_COMPANION_DATA)"
 } finally {
     foreach ($key in $environmentKeys) {

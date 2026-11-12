@@ -8,15 +8,16 @@ param(
     [Security.SecureString]$ApiKey,
     [switch]$KeepApiKey,
     [switch]$NoApiKey,
-    [string]$DataDir = (Join-Path $env:LOCALAPPDATA 'GhostCompanion'),
+    [string]$DataDir = '',
     [string]$ProjectRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'Data-Location.ps1')
 if (-not $ProjectRoot) { $ProjectRoot = Split-Path -Parent $PSScriptRoot }
 $ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
-$DataDir = [System.IO.Path]::GetFullPath($DataDir)
+$DataDir = Resolve-GhostCompanionDataDir $DataDir
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
 $running = @(Get-Process -Name 'Coopanion' -ErrorAction SilentlyContinue | Where-Object {
@@ -24,7 +25,7 @@ $running = @(Get-Process -Name 'Coopanion' -ErrorAction SilentlyContinue | Where
     catch { $false }
 })
 if ($running.Count -gt 0) {
-    throw 'Quit GhostCompanion from its tray menu before changing the model, then run this entry point again.'
+    throw 'Quit Coopanion from its tray menu before changing the model, then run this entry point again.'
 }
 if ($KeepApiKey -and $NoApiKey) { throw 'KeepApiKey and NoApiKey cannot be combined.' }
 if ($ApiKey -and ($KeepApiKey -or $NoApiKey)) { throw 'ApiKey cannot be combined with KeepApiKey or NoApiKey.' }
@@ -116,5 +117,5 @@ if ($encrypted) {
 [System.IO.File]::WriteAllText($providerFile, $providerText, $utf8)
 [System.IO.File]::WriteAllText($deploymentFile, $deploymentText, $utf8)
 Write-Host 'Model configuration saved. No network request was made.'
-Write-Host 'Start GhostCompanion to use this connection.'
+Write-Host 'Start Coopanion to use this connection.'
 Write-Host ('Configuration backup: ' + $backupDir)

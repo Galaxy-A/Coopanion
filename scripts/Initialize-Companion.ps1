@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 [CmdletBinding()]
 param(
-    [string]$DataDir = (Join-Path $env:LOCALAPPDATA 'GhostCompanion'),
+    [string]$DataDir = '',
     [string]$ProjectRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'Data-Location.ps1')
 if (-not $ProjectRoot) { $ProjectRoot = Split-Path -Parent $PSScriptRoot }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $created = New-Object System.Collections.Generic.List[string]
@@ -36,7 +37,7 @@ function Write-NewFile {
     $created.Add($Path)
 }
 
-$DataDir = [System.IO.Path]::GetFullPath($DataDir)
+$DataDir = Resolve-GhostCompanionDataDir $DataDir
 $ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 $deployDir = Join-Path $DataDir 'home\companion'
 $configFile = Join-Path $deployDir 'config.json'

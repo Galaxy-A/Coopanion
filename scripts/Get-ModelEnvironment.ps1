@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 [CmdletBinding()]
 param(
-    [string]$DataDir = (Join-Path $env:LOCALAPPDATA 'GhostCompanion')
+    [string]$DataDir = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'Data-Location.ps1')
+$DataDir = Resolve-GhostCompanionDataDir $DataDir
 $result = @{}
 $providerFile = Join-Path $DataDir 'home\providers\ghost-model\config.json'
 $deploymentFile = Join-Path $DataDir 'home\companion\config.json'
