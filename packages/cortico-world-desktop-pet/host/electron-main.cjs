@@ -22,6 +22,10 @@
  * tables (web/i18n); the windows' titles are the pages' own.
  */
 const { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage, screen, session, shell, systemPreferences } = require('electron');
+if (/^\d{1,5}$/.test(process.env.GHOST_PET_INSPECT_PORT || '') && Number(process.env.GHOST_PET_INSPECT_PORT) <= 65535) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.GHOST_PET_INSPECT_PORT);
+  app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
+}
 const { join } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createCursorSource } = require('./cursor.cjs');
@@ -404,11 +408,11 @@ function runPetHost({ url, parentPid = 0, tray: withTray = true }) {
     win = new BrowserWindow({
       x: wa.x, y: wa.y, width: wa.width, height: wa.height,
       transparent: true, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
-      fullscreenable: false, skipTaskbar: true, hasShadow: false, show: false,
+      fullscreenable: false, skipTaskbar: !process.env.GHOST_PET_INSPECT_PORT, hasShadow: false, show: false,
       ...(GNOME ? { type: 'dock' } : { alwaysOnTop: true }),
       backgroundColor: '#00000000', title: 'Cortico',
       // Windows: Chromium-based apps treat a topmost window without WS_EX_TOOLWINDOW as covering them and stop painting while the pet takes the mouse
-      ...(process.platform === 'win32' ? { type: 'toolbar' } : {}),
+      ...(process.platform === 'win32' && !process.env.GHOST_PET_INSPECT_PORT ? { type: 'toolbar' } : {}),
       webPreferences: {
         preload: join(__dirname, 'preload.cjs'),
         contextIsolation: true, sandbox: true, backgroundThrottling: false,

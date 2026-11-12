@@ -1,4 +1,4 @@
-<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js. -->
+<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs. -->
 # GhostCompanion 定制 fork
 
 本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
@@ -90,6 +90,17 @@ Anthropic Messages 和 Gemini。API 地址会按所选协议移除完整请求�
 更新后退出托盘并重新运行 `Start-GhostCompanion.cmd`，启动器会先构建当前源码的
 设置窗口，再同步应用、设置窗口和供应商实现。缺少源码构建依赖时，使用内置 pnpm
 按锁文件安装；首次启动需要联网和额外磁盘空间，无需另行安装 Node 或 pnpm。
+
+## 本机诊断
+
+使用隔离数据目录检查窗口：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companion.ps1 -DataDir .\scratch\qa-profile -Inspect -InspectPort 19331
+```
+
+主窗口使用 19331，桌宠窗口使用 19332，均只绑定本机。
+验收模式下桌宠显示在任务栏；正常启动不开放调试端口。
 
 ## 上游 Coopanion 说明
 
