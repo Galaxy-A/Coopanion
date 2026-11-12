@@ -1,4 +1,4 @@
-<!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs. -->
+<!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json. -->
 # GhostCompanion
 
 GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
@@ -40,6 +40,29 @@ codex/destiny-ghost/spritesheet.png
 可展开完整聊天窗口；
 托盘菜单可打开设置、显示或隐藏宠物、退出程序。
 运行时的窗口标题保留上游名称 `Coopanion`。
+
+## Coopanion 台词配音
+
+台词配音由独立的 Coopanion World
+`@wocwang/cortico-world-gpt-sovits-for-coopanion@0.8.8` 提供。
+它按固定版本安装到 Coopanion 的独立扩展目录，不复制进本仓库；
+来源、提交和 MIT 许可见 `licenses/gpt-sovits-world.md`。
+
+先启动一次 Coopanion，再运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-GptSovits.ps1 -Restart
+```
+
+或者双击 `Install-GptSovits.cmd`。脚本通过 Coopanion 的本机扩展接口检查并
+安装 World，重启 Core 后启用 `gpt-sovits`。首次打开该 World 的设置页时，
+再按页面提示下载本地推理运行时和模型；模型约占 4–7 GB，仓库不会自动下载或
+提交这些文件。
+
+启用后，Coopanion 的普通台词会由模型先调用 `sovits_speak`，再调用
+`pet_say` 显示同一句话；`pet_ask` 问句不朗读。声音默认在本机播放，音色、
+语言、语速和模型都在 GPTSovits World 页面调整。Coopanion 的聊天记录、模型
+请求和自定义动作继续走原有 World 链路。
 
 ## 模型供应商
 
@@ -230,15 +253,16 @@ Codex 消息和 Coopanion 聊天共同使用这个桌宠窗口。
 GhostCompanion/
   Start-GhostCompanion.cmd
   Manage-GhostCompanionData.cmd
+  Install-GptSovits.cmd
   Configure-Model.cmd
   project.json
-  scripts/                 数据迁移、运行时同步、下载、初始化、启动和模型配置
+  scripts/                 数据迁移、运行时同步、下载、初始化、启动、模型配置和语音 World 安装
   integration/             便携运行时的 World 安装与旧桥接迁移
   packages/cortico-world-codex-activity/  Codex 活动读取、通知、状态和配置
   config/                  首次启动模板与机灵人设
   figures/destiny-ghost/   Coopanion 形象适配
   codex/destiny-ghost/     原格式 Codex 宠物包
-  licenses/               素材来源
+  licenses/               素材来源和语音 World 许可
   runtime/                官方便携运行时，Git 忽略
   downloads/              固定版本下载缓存，Git 忽略
   artifacts/              本机验收记录，Git 忽略

@@ -10,6 +10,14 @@
     "asset": "Coopanion-0.2.19-win-x64-portable.zip",
     "sha256": "ca91b7ab770b8a01c5a04d48809d3bbb46a46be7963a019cf7c40b5ea6f6e684"
   },
+  "voiceWorld": {
+    "package": "@wocwang/cortico-world-gpt-sovits-for-coopanion",
+    "version": "0.8.8",
+    "repository": "https://github.com/wocwang/cortico-world-gpt-sovits-for-coopanion",
+    "commit": "9f7a2c63bd4ccbe416373e8907d5abcb5625f96b",
+    "license": "MIT",
+    "api": 6
+  },
   "figure": "destiny-ghost",
   "codexPet": "codex/destiny-ghost/pet.json"
 }

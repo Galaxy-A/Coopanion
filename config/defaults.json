@@ -53,6 +53,9 @@
         "control": false,
         "permission": "ask-each-turn"
       }
+    },
+    "gpt-sovits": {
+      "enabled": true
     }
   }
 }

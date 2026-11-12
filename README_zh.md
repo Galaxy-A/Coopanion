@@ -1,4 +1,4 @@
-<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs. -->
+<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json. -->
 # GhostCompanion 定制 fork
 
 本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
@@ -41,6 +41,25 @@ World 数据目录；文件只含来源、线程、状态和计数，不保存�
 无法完整同步。显示用的回复摘要、任务摘要与标题只发送给带窗口凭据的桌宠窗口，
 预览页不接收。开启完成回应时，完成事实和标题也会进入 Core 事件记录及当前模型
 的上下文。详情和开发入口见[扩展说明](packages/cortico-world-codex-activity/README.md)。
+
+## Coopanion 台词配音
+
+本 fork 使用独立的 Coopanion World
+`@wocwang/cortico-world-gpt-sovits-for-coopanion@0.8.8` 给普通台词配音。
+它通过 Coopanion 的扩展机制安装，不把第三方源码、模型和音频素材复制进仓库。
+来源、固定提交和 MIT 许可见 [`licenses/gpt-sovits-world.md`](licenses/gpt-sovits-world.md)。
+
+先启动一次 `Start-GhostCompanion.cmd`，再运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-GptSovits.ps1 -Restart
+```
+
+也可以双击 `Install-GptSovits.cmd`。安装后打开 GPTSovits World 页面，按页面提示
+下载本地推理运行时和模型，首次下载约 4–7 GB。启用后，Coopanion 的普通台词会
+先合成声音，再显示同一句气泡；`pet_ask` 问句不朗读。声音默认本机播放，音色、
+语言、语速和模型都在这个 World 的设置页调整。Coopanion 的聊天记录、模型请求
+和自定义动作继续使用原有链路。
 
 ## 数据目录迁移
 
