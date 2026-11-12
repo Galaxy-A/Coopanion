@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // A read-only activity tray. Conversation input and actions remain in Coopanion.
-const ACTIVITY = {
-  running: { label: '正在运行', fallback: '正在思考', icon: 'status_work' },
-  waiting: { label: '需要输入', fallback: '在 Codex 中回应', icon: 'native_warning' },
-  review: { label: '就绪', fallback: '回复已就绪', icon: 'native_check' },
-  failed: { label: '已拦截', fallback: '在 Codex 中查看详情', icon: 'native_warning' },
-};
+import { strings } from './strings.js';
 const STATE_ACTIVITY = {
   working: 'running', waiting: 'waiting', completed: 'review', failed: 'failed',
   interrupted: 'idle', stale: 'unknown', disconnected: 'unknown',
@@ -32,7 +27,14 @@ const STATUS_ICONS = {
   }]],
 };
 
-export function createCodexDisplay({ bubble, body, nativeState, icons, requestFocus }) {
+export function createDisplay({ bubble, body, nativeState, icons, requestFocus, send, language }) {
+  const text = strings(language?.() || document.documentElement.lang);
+  const ACTIVITY = {
+    running: { label: text.running, fallback: text.thinking, icon: 'status_work' },
+    waiting: { label: text.waiting, fallback: text.respond, icon: 'native_warning' },
+    review: { label: text.review, fallback: text.ready, icon: 'native_check' },
+    failed: { label: text.failed, fallback: text.details, icon: 'native_warning' },
+  };
   const style = document.createElement('style');
   style.textContent = `
     .ghost-codex-surface{--ghost-native-bg:#ffffffe6;--ghost-native-line:#0000001f;
@@ -184,14 +186,14 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
   const root = make('section', 'ghost-codex-surface');
   root.id = 'ghost-codex';
   root.hidden = true;
-  root.setAttribute('aria-label', 'Codex 活动');
+  root.setAttribute('aria-label', text.activity);
   const tray = make('div', 'ghost-tray is-collapsed');
   tray.id = 'ghost-codex-tray';
-  tray.setAttribute('aria-label', 'Codex 通知');
+  tray.setAttribute('aria-label', text.notifications);
   const warning = make('p', 'ghost-tray-warning');
   const bar = make('nav', 'ghost-activity-bar');
-  bar.setAttribute('aria-label', '活动与聊天');
-  const pill = button('ghost-pill', 'status_work', '展开 Codex 活动', () => {
+  bar.setAttribute('aria-label', text.activityChat);
+  const pill = button('ghost-pill', 'status_work', text.expand, () => {
     trayOpen = !trayOpen;
     render();
   });
@@ -199,7 +201,7 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
   const pillIcon = make('span', 'ghost-status-icon');
   const pillCopy = make('span', 'ghost-pill-copy');
   pill.replaceChildren(pillIcon, pillCopy);
-  const toggle = button('ghost-activity-toggle', 'native_chevron', '隐藏 Codex 活动', () => {
+  const toggle = button('ghost-activity-toggle', 'native_chevron', text.hide, () => {
     if (Date.now() < toggleClickAfter) return;
     if (pillsVisible && trayOpen && visible().length > 1) trayOpen = false;
     else {
@@ -293,7 +295,11 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
       if (stackClick && !trayOpen && visible().length > 1) {
         event.preventDefault();
         trayOpen = true;
-      } else acknowledge(session);
+      } else {
+        event.preventDefault();
+        acknowledge(session);
+        send({ kind: 'open-thread', threadId: session.id });
+      }
       render();
       syncBody();
     };
@@ -316,7 +322,7 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
       const current = sessions.find((value) => turnKey(value) === element.dataset.turn);
       if (current) dismiss(current);
     };
-    const close = button('ghost-row-button', '', '关闭这条通知', dismissCurrent);
+    const close = button('ghost-row-button', '', text.dismiss, dismissCurrent);
     const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     closeIcon.setAttribute('viewBox', '0 0 12 12');
     closeIcon.setAttribute('aria-hidden', 'true');
@@ -331,7 +337,7 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
     const content = make('div', 'ghost-swipe-content');
     content.append(anchor, controls);
     const accessory = make('div', 'ghost-swipe-accessory');
-    const swipeClose = button('ghost-swipe-dismiss', '', '关闭这条通知', dismissCurrent);
+    const swipeClose = button('ghost-swipe-dismiss', '', text.dismiss, dismissCurrent);
     swipeClose.replaceChildren(closeIcon.cloneNode(true));
     accessory.append(swipeClose);
     accessory.hidden = true;
@@ -488,9 +494,9 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
     const activity = animationSession ? activityOf(animationSession) : 'idle';
     const hovering = petHover || root.matches(':hover, :focus-within') || Date.now() < hoverUntil;
     lastHovering = hovering;
-    warning.textContent = disconnected ? 'Codex 连接已断开'
-      : packet?.warning === 'unsupported-version' ? '此 Codex 版本暂不兼容'
-      : packet?.warning ? '部分活动暂时无法同步' : '';
+    warning.textContent = disconnected ? text.disconnected
+      : packet?.warning === 'unsupported-version' ? text.unsupported
+      : packet?.warning ? text.partial : '';
     root.hidden = !enabled || !attached || (!available.length && !hovering)
       || (!packet && !disconnected);
     root.dataset.activity = activity;
@@ -509,15 +515,15 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
     pill.hidden = !pillsVisible || !nativeBusy || !available.length;
     pillIcon.hidden = first && activityOf(first) === 'running';
     pillIcon.replaceChildren(icon(first ? ACTIVITY[activityOf(first)].icon : 'status_wait'));
-    pillCopy.textContent = available.length > 1 ? `${available.length} 项活动`
+    pillCopy.textContent = available.length > 1 ? text.count.replace('{count}', available.length)
       : first ? ACTIVITY[activityOf(first)].label : '';
-    pill.title = trayOpen ? '收起 Codex 活动' : '展开 Codex 活动';
+    pill.title = trayOpen ? text.collapse : text.expand;
     pill.setAttribute('aria-label', `${pill.title}，${pillCopy.textContent}`);
     pill.setAttribute('aria-expanded', String(trayOpen && !nativeBusy));
     toggle.hidden = !available.length || nativeBusy;
     const toggleLabel = pillsVisible
-      ? trayOpen && available.length > 1 ? '收起 Codex 活动' : '隐藏 Codex 活动'
-      : `显示 Codex 活动，${available.length} 项`;
+      ? trayOpen && available.length > 1 ? text.collapse : text.hide
+      : text.show.replace('{count}', available.length);
     toggle.title = toggleLabel;
     toggle.setAttribute('aria-label', toggleLabel);
     toggle.setAttribute('aria-expanded', String(pillsVisible));
@@ -681,5 +687,12 @@ export function createCodexDisplay({ bubble, body, nativeState, icons, requestFo
     render();
   });
   return { receive, merge, step, disconnect, layout,
+    dispose() {
+      disconnect();
+      document.removeEventListener('pointerdown', resetOutsideSwipe, true);
+      document.removeEventListener('click', resetOutsideSwipe, true);
+      root.remove();
+      style.remove();
+    },
     get elements() { return root.hidden ? [root] : [root, toggle]; } };
 }

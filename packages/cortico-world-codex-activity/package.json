@@ -1,0 +1,15 @@
+{
+  "name": "cortico-world-codex-activity",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Codex desktop activity notifications and figure states in Coopanion",
+  "license": "AGPL-3.0-or-later",
+  "keywords": ["cortico-world", "cortico", "codex"],
+  "engines": { "node": ">=22" },
+  "main": "./src/index.ts",
+  "cortico": { "kind": "world", "api": 6, "describe": "describe.json" },
+  "peerDependencies": { "cortico-world-desktop-pet": "^0.2.0" },
+  "peerDependenciesMeta": { "cortico-world-desktop-pet": { "optional": true } },
+  "devDependencies": { "cortico-world-desktop-pet": "workspace:*" },
+  "files": ["src", "web", "describe.json", "README.md"]
+}

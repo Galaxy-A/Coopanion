@@ -1,4 +1,4 @@
-<!-- Owner: scripts/Start-Companion.ps1, integration/codex-bridge.mjs, integration/codex-view.js, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs. -->
+<!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js. -->
 # GhostCompanion
 
 GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
@@ -115,14 +115,32 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Manage-Data.ps
 无有效模型连接时，界面可以保留待发送消息；这不代表消息已经送达模型，
 也不等于完成了一轮 AI 对话。
 
-## Codex 对话融合
+## Codex 活动 World
 
-启动入口默认启用 Codex 桌面对话桥。同一只机灵按本机原生宠物的通知结构显示
+`cortico-world-codex-activity` 是独立的 World 扩展，World ID 为 `codex-activity`。
+首次升级由启动器安装并启用；此后在设置的「我的 World」中启用、停用或重启
+「Codex 活动」。停用会停止读取 Codex 记录并移除通知和对应状态；再次启用恢复
+读取。停用后可在扩展管理中卸载，后续启动不会自动重新安装。
+
+配置段为 `worlds.codex-activity`，会话目录、读取间隔和最大对话数分别为
+`sessionsDir`、`pollMs`、`maxThreads`；保存后重启此 World 生效。
+会话目录留空时使用 `CODEX_HOME/sessions`，未设置 `CODEX_HOME` 时使用当前用户的
+`.codex/sessions`。指定目录时填写绝对路径。读取间隔默认 400 毫秒，范围为
+100–60000 毫秒；最大对话数默认 32，范围为 1–32。包本身默认关闭，由部署启用。
+扩展入口和后续开发位置见[扩展说明](packages/cortico-world-codex-activity/README.md)。
+
+「完成后通知 Coopanion」对应 `notifyOnComplete`，默认开启。World 运行期间观察到
+Codex 明确完成一轮工作后，会将完成事实和对话标题交给 Coopanion 的正常对话流程。
+当前模型按已有的人设组织回应，并使用原有气泡、聊天记录和动作；启用语音扩展时
+也沿用其配音流程。没有语音扩展时仍可显示气泡。完成回应需要有效模型连接，并遵循
+Core 的暂停状态与 World 可见性。启动前的历史完成、失败和中断不会触发完成回应。
+
+同一只机灵按本机原生宠物的通知结构显示
 会话标题和最新公开进度或回复摘要。普通通知宽 330、高 56 CSS 像素，圆角 32，
 标题和摘要分别单行截断；短标题搭配长摘要时改为行内组合，最多两行。
 较小屏幕下宽度限制在视口内。公开消息到达后更新对应通知，不排队播放。
 
-同时跟踪最多 32 条桌面对话，按当前轮开始时间从新到旧排列，时间不可用时回退
+最多显示 `maxThreads` 条桌面对话，按当前轮开始时间从新到旧排列，时间不可用时回退
 到会话活动时间；同轮进度更新不反复抢占首位。通知默认收叠，前三层偏移
 0／8／16 像素、比例 1／0.94／0.86；多条时首次点击展开，展开后逐条显示，
 间距 8 像素，再点对应通知回到 Codex。单条通知直接打开线程。没有页码、左右
@@ -141,8 +159,8 @@ Escape 也可收回展开堆叠。聊天使用原有右侧功能入口或双击�
 需要输入或阻塞时点击通知回到 Codex；只读桥不提供审批、回复或停止任务按钮。
 
 双击机灵和原有聊天窗口仍走 Coopanion 的聊天、聊天记录及模型服务；
-自定义动作继续走原有动作链路。Codex 内容仅以纯文本展示，不调用 Coopanion
-模型、不写入其聊天记录，也不把回复中的文字解释成动作。
+自定义动作继续走原有动作链路。Codex 进度和回复摘要以纯文本展示，不作为模型
+指令；完成事件进入正常对话流程后，Coopanion 的回应写入原有聊天记录。
 Codex 活动面板与 Coopanion 聊天气泡是同一桌宠窗口内的独立显示区域。
 原有聊天或输入时，通知收紧为活动条，避免覆盖输入框；拖动、自定义动作、
 原有模型思考和语音状态仍优先。Codex 动画跟随首条可见通知：运行用第 7 行扫描、
@@ -150,8 +168,8 @@ Codex 活动面板与 Coopanion 聊天气泡是同一桌宠窗口内的独立显
 同一轮同一状态的更新不会反复重启动画。被原有动作抢占时保存尚未播完的进度，
 动作结束后继续剩余轮次；已播完三轮则保持待机。减少动态效果时显示对应动作首帧。
 关闭通知后跟随下一条可见通知或待机，源任务仍保持原状态。
-桥接启用时不会自动弹出 Coopanion 模型配置卡；主动聊天而未配置模型时，
-仍会出现原有的模型连接提示。使用 Codex 气泡不需要另外配置模型服务。
+使用 Codex 活动显示不需要配置模型服务；聊天和完成回应使用 Coopanion 当前模型。
+有外部显示 World 注册时，缺少模型连接不会周期自动弹出配置对话；主动聊天时仍会提示连接模型。
 
 当前适配经过本机核对的 Codex `0.167.x` 桌面会话记录格式。
 它只读本用户 Codex sessions 目录及相邻的 session_index.jsonl 标题索引，
@@ -172,18 +190,21 @@ Codex 活动面板与 Coopanion 聊天气泡是同一桌宠窗口内的独立显
 Codex 原生宠物浮层仍由 Codex 管理。确认桥接正常后，在 Codex 中隐藏原生宠物，
 桌面即可只保留这一只机灵；本项目不修改 Codex 私有设置、不卸载原生宠物素材。
 
-临时停用桥接：先从托盘退出，再运行：
+也可先从托盘退出，再用兼容启动选项将此 World 设为停用：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companion.ps1 -NoCodexBridge
 ```
 
-桥接诊断为机灵服务的只读 `GET /api/codex-bridge`，默认
-`http://127.0.0.1:7797/api/codex-bridge`。
-同样的状态写在 `%LOCALAPPDATA%\GhostCompanion\codex-bridge\status.json`，
-只含来源、线程、状态和计数，不保存对话正文。
-回复摘要、任务摘要与标题只发送给带窗口凭据的机灵窗口，不广播给预览页或
-本地监听客户端。已读记录仅在桌宠自己的本地存储中保存轮次标识和时间，不保存正文。
+重新启用请使用「我的 World」中的开关。World 页面显示读取状态、会话目录和
+当前对话数；诊断文件通常为应用数据目录中的
+`home/companion/data/worlds/codex-activity/status.json`，`paths.data` 配置可更改其中的
+World 数据目录。文件只含来源、线程、状态和计数，不保存对话正文。
+原 `/api/codex-bridge` 路由已移除。
+读取器由 World 生命周期启动，不再通过 `GHOST_CODEX_BRIDGE_MODULE` 环境变量启动。
+显示用的回复摘要、任务摘要与标题只发送给带窗口凭据的机灵窗口，不广播给预览页或
+本地监听客户端。开启完成回应时，完成事实和标题也会进入 Core 事件记录及当前模型
+的上下文。已读记录仅在桌宠自己的本地存储中保存轮次标识和时间，不保存正文。
 
 这仍是独立宿主对原生行为的适配，不是 Codex 原生 UI 扩展。当前记录没有覆盖的
 审批内容、实时错误及逐字流式进度无法凭空恢复；需要回到 Codex 操作。
@@ -212,7 +233,8 @@ GhostCompanion/
   Configure-Model.cmd
   project.json
   scripts/                 数据迁移、运行时同步、下载、初始化、启动和模型配置
-  integration/             Codex 只读桥、显示器与可重现的宿主适配器
+  integration/             便携运行时的 World 安装与旧桥接迁移
+  packages/cortico-world-codex-activity/  Codex 活动读取、通知、状态和配置
   config/                  首次启动模板与机灵人设
   figures/destiny-ghost/   Coopanion 形象适配
   codex/destiny-ghost/     原格式 Codex 宠物包
@@ -226,10 +248,10 @@ GhostCompanion/
 
 固定使用 Coopanion `v0.2.19` Windows x64 portable。
 下载脚本核对 GitHub Release 公布的 SHA-256 后才解压。
-启动时在固定版本上应用四处小范围宿主适配，安装前核对原文件哈希，
-并将原文件保存在运行时的 `resources/app/.ghost-bridge-originals`。
-重复启动不会重复叠加补丁；检测到未知修改时停止安装并保留现场。
-桥接逻辑保存在项目 `integration/` 中，可在重新下载的运行时上重现。
+启动器同步项目中的桌宠显示接口和 Codex 活动扩展，并把扩展登记到当前数据目录。
+旧桥接迁移和运行时文件的恢复副本保存在 `resources/app/.ghost-bridge-originals`；
+检测到未知运行时修改时停止安装并保留现场。Codex 特定读取和显示逻辑保存在
+`packages/cortico-world-codex-activity/`，由 World 生命周期管理。
 不安装为系统服务，不下载本地推理模型。
 便携运行时包含 Electron，下载文件约 230 MB；像素素材轻量不代表
 Electron 运行时本身体积很小，实际内存占用应以本机运行结果为准。

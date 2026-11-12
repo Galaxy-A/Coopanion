@@ -1,10 +1,46 @@
-<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs. -->
+<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js. -->
 # GhostCompanion 定制 fork
 
 本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
 保留上游提交历史，并增加 Codex 活动通知、状态动画和机灵形象适配。
 定制版的安装、使用、功能边界及素材说明见 [GhostCompanion README](README.md)。
 公开仓库不附带私人本地使用的机灵图集。
+
+## Codex 活动 World
+
+Codex 活动显示由独立扩展 `cortico-world-codex-activity` 提供，World ID 为
+`codex-activity`。首次升级由启动器安装并启用，之后在设置的「我的 World」中
+启用、停用或重启「Codex 活动」。停用会停止读取并移除通知与状态；停用后可在
+扩展管理中卸载，后续启动不会自动重新安装。
+
+配置段为 `worlds.codex-activity`，会话目录、读取间隔和最大对话数分别为
+`sessionsDir`、`pollMs`、`maxThreads`；保存后重启此 World 生效。包本身默认关闭，
+由部署启用。读取间隔默认 400 毫秒，范围为 100–60000 毫秒；最大显示对话数默认
+32，范围为 1–32。会话目录留空时使用 `CODEX_HOME/sessions`，未设置
+`CODEX_HOME` 时使用当前用户的 `.codex/sessions`；自定义目录需为绝对路径。
+通知与状态显示在同一只桌宠中，Coopanion 聊天记录、模型请求和自定义动作继续
+使用原有链路。活动显示不需要配置模型服务。
+有外部显示 World 注册时，缺少模型连接不会周期自动弹出配置对话；主动聊天时仍会提示连接模型。
+
+「完成后通知 Coopanion」对应 `notifyOnComplete`，默认开启。World 运行期间观察到
+Codex 明确完成一轮工作后，会将完成事实和对话标题交给 Coopanion 的正常对话流程。
+当前模型按已有的人设组织回应，并使用原有气泡、聊天记录和动作；启用语音扩展时
+也沿用其配音流程。没有语音扩展时仍可显示气泡。完成回应需要有效模型连接，并遵循
+Core 的暂停状态与 World 可见性。启动前的历史完成、失败和中断不会触发完成回应。
+
+World 页面显示读取状态、会话目录和当前对话数。诊断文件通常为应用数据目录中的
+`home/companion/data/worlds/codex-activity/status.json`，`paths.data` 可更改其中的
+World 数据目录；文件只含来源、线程、状态和计数，不保存对话正文。
+读取器由 World 生命周期启动，不再通过 `GHOST_CODEX_BRIDGE_MODULE` 环境变量启动，
+原 `/api/codex-bridge` 路由已移除。
+
+也可先从托盘退出，再运行 `scripts/Start-Companion.ps1 -NoCodexBridge` 将此 World
+设为停用；之后从「我的 World」重新启用。
+
+当前读取 Codex `0.167.x` 的桌面记录；未落盘的审批、错误、逐字流和原生未读状态
+无法完整同步。显示用的回复摘要、任务摘要与标题只发送给带窗口凭据的桌宠窗口，
+预览页不接收。开启完成回应时，完成事实和标题也会进入 Core 事件记录及当前模型
+的上下文。详情和开发入口见[扩展说明](packages/cortico-world-codex-activity/README.md)。
 
 ## 数据目录迁移
 

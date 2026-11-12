@@ -29,8 +29,8 @@ if ($running.Count -gt 0) {
     throw "Coopanion is already running (process $($running[0].ProcessId)). Exit it from the tray before restarting."
 }
 & (Join-Path $PSScriptRoot 'Sync-GhostCompanionRuntime.ps1')
-if (-not $NoCodexBridge) { & (Join-Path $PSScriptRoot 'Install-CodexBridge.ps1') }
 & (Join-Path $PSScriptRoot 'Initialize-Companion.ps1') -DataDir $DataDir | Out-Null
+& (Join-Path $PSScriptRoot 'Install-CodexBridge.ps1') -DataDir $DataDir -Disable:$NoCodexBridge
 $modelEnvironment = & (Join-Path $PSScriptRoot 'Get-ModelEnvironment.ps1') -DataDir $DataDir
 
 $environmentKeys = @('CORTICO_COMPANION_DATA', 'GHOST_COMPANION_DATA_POINTER', 'COOPANION_PACK_ROOTS', 'GHOST_CODEX_BRIDGE_MODULE', 'GHOST_PET_INSPECT_PORT') + @($modelEnvironment.Keys)
@@ -42,9 +42,7 @@ try {
     $env:CORTICO_COMPANION_DATA = $DataDir
     $env:GHOST_COMPANION_DATA_POINTER = $dataPointer
     $env:COOPANION_PACK_ROOTS = Join-Path $project 'figures'
-    $env:GHOST_CODEX_BRIDGE_MODULE = if ($NoCodexBridge) { '' } else {
-        ([Uri](Join-Path $project 'integration\codex-bridge.mjs')).AbsoluteUri
-    }
+    Remove-Item -LiteralPath Env:GHOST_CODEX_BRIDGE_MODULE -ErrorAction SilentlyContinue
     if ($Inspect) {
         $env:GHOST_PET_INSPECT_PORT = if ($InspectPort -gt 0 -and $InspectPort -lt 65535) {
             [string]($InspectPort + 1)
@@ -81,7 +79,7 @@ try {
         figureRoots = $env:COOPANION_PACK_ROOTS
         runtime = 'Coopanion 0.2.19 portable'
         inspect = [bool]$Inspect
-        codexBridge = -not [bool]$NoCodexBridge
+        codexWorld = 'codex-activity'
     } | ConvertTo-Json -Depth 4
     [IO.File]::WriteAllText(
         (Join-Path $artifacts 'last-launch.json'),

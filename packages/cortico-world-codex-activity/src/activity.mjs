@@ -9,8 +9,6 @@ import { watch } from 'node:fs';
 const TAIL_BYTES = 8 * 1024 * 1024;
 const MAX_LINE = 4 * 1024 * 1024;
 const INDEX_BYTES = 1024 * 1024;
-const POLL_MS = 400;
-const MAX_THREADS = 32;
 const TERMINAL = new Set(['completed', 'interrupted', 'failed']);
 const WAITING_TOOLS = new Set([
   'request_user_input', 'request_permissions', 'request_environment_input',
@@ -50,14 +48,15 @@ const dateDirectory = (date) => [
 ];
 const parse = (line) => { try { return JSON.parse(line); } catch { return null; } };
 
-export async function attachCodexBridge({ send }) {
-  const sessionsRoot = process.env.GHOST_CODEX_SESSIONS_ROOT
+export async function attachCodexBridge({ send, onComplete, sessionsDir, receiptDir, pollMs = 400, maxThreads = 32 }) {
+  const sessionsRoot = sessionsDir
     || join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'sessions');
-  const receiptDir = join(process.env.CORTICO_COMPANION_DATA, 'codex-bridge');
   const bridgeId = randomUUID();
   const attachedAt = Date.now();
   const sessions = new Map();
   const threadNames = new Map();
+  const completions = new Map();
+  const completedTurns = new Set();
   const ignored = new Set();
   const unsupportedFiles = new Set();
   const changedFiles = new Set();
@@ -111,6 +110,14 @@ export async function attachCodexBridge({ send }) {
           session.changedAt = time;
           if (live) session.live = true;
           session.calls.clear();
+          const completionKey = `${session.id}:${session.turnId}`;
+          if (end === 'completed' && time >= attachedAt && !completedTurns.has(completionKey)) {
+            completedTurns.add(completionKey);
+            completions.set(completionKey, {
+              threadId: session.id, turnId: session.turnId, completedAtMs: time,
+              title: threadNames.get(session.id) || session.title || basename(session.cwd.replace(/\\/g, '/')),
+            });
+          }
         }
       }
       return;
@@ -358,7 +365,7 @@ export async function attachCodexBridge({ send }) {
 
   function status() {
     return {
-      enabled: true, source: 'desktop-transcript', format: 'codex-0.167',
+      enabled: !stopped, source: 'desktop-transcript', format: 'codex-0.167', sessionsDir: sessionsRoot,
       bridgeId, sequence, messages, malformed, unsupported: unsupportedFiles.size, discoveryError,
       selectedSession: snapshot.session?.id || null,
       sessions: orderedSessions().map((s) => ({
@@ -394,11 +401,12 @@ export async function attachCodexBridge({ send }) {
   }
 
   async function publish() {
+    if (stopped) return;
     const ordered = orderedSessions();
     const active = (session) => ['working', 'waiting'].includes(stateOf(session));
     // The cap retains ongoing work; tool/message updates do not change the turn's card order.
     const retained = [...ordered.filter(active), ...ordered.filter((s) => !active(s))]
-      .slice(0, MAX_THREADS)
+      .slice(0, maxThreads)
       .sort((a, b) =>
         (b.startedAt || b.seenAt) - (a.startedAt || a.seenAt) || b.id.localeCompare(a.id));
     const visible = retained.map(wireSession);
@@ -438,17 +446,29 @@ export async function attachCodexBridge({ send }) {
         await refreshThreadNames();
       }
       for (const [file, session] of sessions) await readSession(file, session);
+      const finished = [...completions.values()];
+      completions.clear();
+      if (!stopped) for (const completion of finished) onComplete?.(completion);
       await publish();
     } catch (error) {
       discoveryError = error.code || 'adapter-failed';
     } finally { polling = false; }
   }
   await tick();
-  const timer = setInterval(() => { void tick(); }, POLL_MS);
+  let inFlight = Promise.resolve();
+  const timer = setInterval(() => { if (!polling) inFlight = tick(); }, pollMs);
   timer.unref();
   return {
     snapshot: () => snapshot,
     status,
-    stop() { stopped = true; clearInterval(timer); watcher?.close(); },
+    async stop() {
+      stopped = true;
+      clearInterval(timer);
+      watcher?.close();
+      completions.clear();
+      await inFlight;
+      await mkdir(receiptDir, { recursive: true });
+      await writeFile(join(receiptDir, 'status.json'), JSON.stringify(status(), null, 2), { mode: 0o600 });
+    },
   };
 }

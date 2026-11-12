@@ -37,6 +37,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { LANGUAGES, LANGUAGE_NAMES, type Language } from 'cortico/core/language.ts';
 import type { DesktopPetWorld, PetDialog, PetDialogAnswer, PetDialogHandle, PetDialogInput } from 'cortico-world-desktop-pet';
 import { USER_MAX, capFor, petText } from 'cortico-world-desktop-pet';
+import { petDisplays } from 'cortico-world-desktop-pet/display';
 import { VENDOR_ICONS, defaultRegion, localized, siteOf, vendorName, vendorsFor, type Vendor } from 'cortico-provider-coo';
 import { connectChatGPT, connectVendor, currentConnection, type Connection, type WebUiCall } from 'cortico-provider-coo/src/connect.ts';
 import { signInReason } from 'cortico-provider-coo/src/strings.ts';
@@ -649,7 +650,7 @@ export async function askForKey(deps: Pick<GuideDeps, 'pet' | 'console' | 'track
         const go = 'index' in a && a.index === 0;
         deps.track?.('key_prompt', { answer: go ? 'connect' : 'later' });
         if (go) await connect(S.askVendor(vendorName(vendorsFor(deps.language()).shown[0]!, deps.language())), 'prompt');
-      } else if (ready && Date.now() - lastAsk >= ASK_AGAIN_MS) {
+      } else if (ready && petDisplays().length === 0 && Date.now() - lastAsk >= ASK_AGAIN_MS) {
         await connect(asked ? S.askAgain : S.askFirst, 'ask');
       } else {
         await sleep(KEY_POLL_MS);

@@ -1,0 +1,11 @@
+{
+  "tools": [],
+  "events": [{
+    "type": "codex-activity.completed",
+    "trigger": "preempt",
+    "description": {
+      "zh": "Codex 本轮工作完成，交给当前模型组织提醒。",
+      "en": "A Codex turn completed; the current model can compose a reminder."
+    }
+  }]
+}
