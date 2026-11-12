@@ -12,7 +12,7 @@ export function plainRemote(baseUrl: string): boolean {
  * (Tailscale and carrier NAT), IPv6 unique-local and link-local, and LAN names (one label, or .local,
  * .lan, .home.arpa, .internal).
  */
-function privateHost(hostname: string): boolean {
+export function privateHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || /\.(local|lan|home\.arpa|internal)$/.test(host)) return true;
   const v4 = /^(\d+)\.(\d+)\.\d+\.\d+$/.exec(host);

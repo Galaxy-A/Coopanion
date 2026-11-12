@@ -7,6 +7,12 @@ export const cooText: Partial<typeof en> = {
   protocolHint: '留空時，列出的服務使用它自己的協定，其他位址使用 responses。responses：POST <位址>/responses；chat：POST <位址>/chat/completions；anthropic：Messages API，位址填寫 /v1 之前的部分；gemini：Gemini API，位址填寫 /models 之前的部分。',
   badProtocol: (protocols: string) => `協定只能是 ${protocols}`,
   httpRemote: "遠端位址只能用 https:http 不加密，API Key 和對話會以明文傳輸。本機和區域網路的位址可以用 http。",
+  catalog: {
+    invalid: '模型清單請求的配置無效，請檢查 API 位址、協定和 API Key。',
+    keyRequired: '請填寫 API Key；修改連線位址、協定或密鑰變數後需要重新填寫。',
+    unsupported: '此服務未提供相容的模型清單，請手動填寫模型 ID。',
+    timeout: '取得模型清單逾時，請重試。',
+  },
   chatgpt: {
     panel: 'ChatGPT 帳號',
     description: '以 ChatGPT 帳號登入，請求計入該帳號的 ChatGPT 方案用量。',

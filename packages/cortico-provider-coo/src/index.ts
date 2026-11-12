@@ -22,16 +22,17 @@ import type { LLMProviderEntry, ReasoningTier } from 'cortico/core/types.ts';
 import type { ConfigGroup } from 'cortico/core/config-schema.ts';
 import type { Language } from 'cortico/core/language.ts';
 import { isContextOverflow } from 'cortico/providers/transport/errors.ts';
-import { ModelCatalog } from 'cortico/providers/openai-responses-compat/native.ts';
 import { ClaudeProvider } from './anthropic/client.ts';
 import { VendorChat } from './chat.ts';
-import { GeminiProvider, listGeminiModels } from './gemini/client.ts';
+import { GeminiProvider } from './gemini/client.ts';
 import { ImageFallback } from './image-fallback.ts';
+import { cooCatalog } from './catalog.ts';
+import { listCooModels, protocolOf, type CooOptions } from './models.ts';
 import { vendorPrices } from './pricing.ts';
 import { VendorResponses } from './responses.ts';
 import { cooText } from './strings.ts';
 import { plainRemote } from './address.ts';
-import { PROTOCOLS, VENDORS, effortOf, locate, siteOf, vendorOf, vendorName, type Language as VendorLanguage, type Protocol } from './vendors.ts';
+import { PROTOCOLS, VENDORS, effortOf, locate, siteOf, vendorOf, vendorName, type Language as VendorLanguage } from './vendors.ts';
 
 /** vendors.ts spells out Cortico's `Language`; this stops compiling when the two differ. */
 const SAME_LANGUAGES: [Language, VendorLanguage] extends [VendorLanguage, Language] ? true : never = true;
@@ -46,18 +47,9 @@ const tiers = (t: CooText['tiers']): ReasoningTier[] => [
   { id: 'max', label: t.max, thinking: true, effort: 'max' },
 ];
 
-export interface CooOptions {
-  /** Unset: the listed service's own protocol, Responses for any other URL. */
-  protocol?: Protocol;
-}
+export { protocolOf, type CooOptions } from './models.ts';
 
 const cooOptions = (entry: LLMProviderEntry): CooOptions => (entry.options ?? {}) as CooOptions;
-
-/** The longest Anthropic model list read; listing stops there. */
-const MODELS_MAX = 2000;
-
-export const protocolOf = (entry: LLMProviderEntry): Protocol =>
-  cooOptions(entry).protocol ?? locate(entry.baseUrl)?.site.protocol ?? 'responses';
 
 /** The Messages API states an oversized prompt as `prompt is too long`, the Gemini API as a token count over the maximum. */
 function contextOverflow(error: { status: number; body: string }): boolean {
@@ -101,6 +93,7 @@ export const COO = {
   serviceTiers: [],
   normalize,
   config: (name, _entry, language) => [optionsGroup(name, cooText(language))],
+  webUi: cooCatalog,
   validateEntry: (entry, language) => {
     const { protocol } = cooOptions(entry);
     if (protocol !== undefined && !PROTOCOLS.includes(protocol))
@@ -125,50 +118,29 @@ export const COO = {
     const media = { enabled: () => current().multimodal === true, read: host.readBlob };
     const withFallback = (client: BaseProvider) => new ImageFallback(client, media, contextOverflow, host.log);
     const compatibilityKey = () => [vendor?.id ?? 'coo', name, ...(protocol === 'responses' ? [] : [protocol])];
-    const stated = (model: string) => vendor?.contextWindows?.[model];
-    // the listing carries the windows the vendor table states, so the console fills them in instead of asking
-    const withStated = <M extends { id: string; contextWindow?: number }>(models: M[]) =>
-      models.map((model) => (stated(model.id) ? { ...model, contextWindow: stated(model.id) } : model));
+    const windows = new Map<string, number | undefined>();
+    const listModels = async () => {
+      const models = await listCooModels(entry, apiKey);
+      for (const model of models) windows.set(model.id, model.contextWindow);
+      return models;
+    };
+    const contextWindow = (model: string) => vendor?.contextWindows?.[model] ?? windows.get(model);
 
     if (protocol === 'anthropic') {
-      const client = new ClaudeProvider({ baseUrl: entry.baseUrl, apiKey, keepThinking: host.keepThinking, log: host.log, media });
-      const windows = new Map<string, number | undefined>();
+      const client = new ClaudeProvider({ baseUrl: entry.baseUrl, apiKey, requiresApiKey: !!entry.secret, keepThinking: host.keepThinking, log: host.log, media });
       return {
-        client: withFallback(client), compatibilityKey,
-        contextWindow: (model) => stated(model) ?? windows.get(model),
-        listModels: async () => {
-          const models = [];
-          for await (const model of client.client().models.list()) {
-            // the SDK pages on while the service says there is more
-            if (models.length >= MODELS_MAX) break;
-            const row = model as typeof model & { max_input_tokens?: number; max_tokens?: number };
-            windows.set(model.id, row.max_input_tokens);
-            models.push({ id: model.id, displayName: model.display_name,
-              ...(row.max_input_tokens ? { contextWindow: row.max_input_tokens } : {}), ...(row.max_tokens ? { maxOutputTokens: row.max_tokens } : {}) });
-          }
-          return withStated(models);
-        },
+        client: withFallback(client), compatibilityKey, contextWindow, listModels,
       };
     }
     if (protocol === 'gemini') {
-      const windows = new Map<string, number | undefined>();
       return {
-        client: withFallback(new GeminiProvider({ baseUrl: entry.baseUrl, apiKey, media, keepThinking: host.keepThinking, log: host.log })),
-        compatibilityKey,
-        contextWindow: (model) => stated(model) ?? windows.get(model),
-        listModels: async () => {
-          const models = await listGeminiModels(entry.baseUrl, apiKey ?? '');
-          for (const model of models) windows.set(model.id, model.contextWindow);
-          return withStated(models);
-        },
+        client: withFallback(new GeminiProvider({ baseUrl: entry.baseUrl, apiKey, requiresApiKey: !!entry.secret, media, keepThinking: host.keepThinking, log: host.log })),
+        compatibilityKey, contextWindow, listModels,
       };
     }
     const effort = (model: string) => (located ? effortOf(located.vendor, located.site, model) : undefined);
-    const headers: Record<string, string> = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
-    const catalog = new ModelCatalog(() => ({ baseUrl: entry.baseUrl, headers }));
     return {
-      listModels: async () => withStated(await catalog.list()),
-      contextWindow: (model) => stated(model) ?? catalog.contextWindow(model),
+      listModels, contextWindow,
       compatibilityKey,
       client: withFallback(protocol === 'chat'
         ? new VendorChat({ baseUrl: entry.baseUrl, apiKey, media, keepThinking: host.keepThinking, log: host.log, effort, syntheticReasoning: vendor?.syntheticReasoning })

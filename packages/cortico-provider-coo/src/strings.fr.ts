@@ -7,6 +7,12 @@ export const cooText: Partial<typeof en> = {
   protocolHint: "Non défini : un service listé utilise son propre protocole, toute autre URL utilise responses. responses : POST <URL>/responses ; chat : POST <URL>/chat/completions ; anthropic : la Messages API, avec l'URL avant /v1 ; gemini : la Gemini API, avec l'URL avant /models.",
   badProtocol: (protocols: string) => `Le protocole doit être l'un de ${protocols}`,
   httpRemote: "Une adresse distante doit utiliser https : http n'est pas chiffré, l'API Key et la conversation circuleraient en clair. Les adresses de cet ordinateur ou du réseau local peuvent utiliser http.",
+  catalog: {
+    invalid: "La configuration du catalogue est invalide. Vérifiez l'URL API, le protocole et l'API Key.",
+    keyRequired: "Saisissez une API Key. Une modification de l'URL, du protocole ou de la variable de clé exige une nouvelle saisie.",
+    unsupported: "Ce service ne fournit pas de catalogue compatible. Saisissez l'ID du modèle manuellement.",
+    timeout: "Le délai de récupération du catalogue est dépassé. Réessayez.",
+  },
   chatgpt: {
     panel: 'Compte ChatGPT',
     description: "Connexion avec un compte ChatGPT ; les requêtes sont décomptées de l'offre ChatGPT de ce compte.",

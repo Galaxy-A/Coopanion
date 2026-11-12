@@ -1,5 +1,5 @@
 /**
- * Gemini API client on the framework transport, API key only:
+ * Gemini API client on the framework transport:
  * `POST <baseUrl>/models/<model>:generateContent`, or `:streamGenerateContent?alt=sse` when
  * streaming, with the key in `x-goog-api-key`. Images are limited to the newest delivered batch
  * (`sinceLastDelivery`).
@@ -18,6 +18,8 @@ import { GeminiResponseAssembly, geminiRequest, parseGeminiResponse } from './wi
 export interface GeminiProviderOptions {
   baseUrl: string;
   apiKey?: string;
+  /** False for a connection with no secret variable; otherwise a missing key fails before sending. */
+  requiresApiKey?: boolean;
   media?: CompatMediaOptions;
   keepThinking?: () => boolean;
   log?: Logger;
@@ -59,8 +61,8 @@ export class GeminiProvider extends OpenAIHttpClient {
   }
 
   protected headers(): Record<string, string> {
-    if (!this.opts.apiKey) throw new LLMError('Gemini API 缺密钥(端点的密钥变量未设置)', 401, '');
-    return { 'Content-Type': 'application/json', 'x-goog-api-key': this.opts.apiKey };
+    if (this.opts.requiresApiKey !== false && !this.opts.apiKey) throw new LLMError('Gemini API 缺密钥(端点的密钥变量未设置)', 401, '');
+    return { 'Content-Type': 'application/json', ...(this.opts.apiKey ? { 'x-goog-api-key': this.opts.apiKey } : {}) };
   }
 }
 
@@ -73,7 +75,7 @@ const MODEL_LIST_MS = 60_000;
  * above are reached; a redirect fails it, since the key header would follow it. The id drops the
  * `models/` prefix and the window is `inputTokenLimit`.
  */
-export async function listGeminiModels(baseUrl: string, apiKey: string): Promise<Array<{ id: string; contextWindow?: number; maxOutputTokens?: number }>> {
+export async function listGeminiModels(baseUrl: string, apiKey: string, signal?: AbortSignal): Promise<Array<{ id: string; contextWindow?: number; maxOutputTokens?: number }>> {
   const models: Array<{ id: string; contextWindow?: number; maxOutputTokens?: number }> = [];
   const deadline = AbortSignal.timeout(MODEL_LIST_MS);
   const seen = new Set<string>();
@@ -81,10 +83,11 @@ export async function listGeminiModels(baseUrl: string, apiKey: string): Promise
   for (let pages = 0; pages < MODEL_PAGES_MAX; pages++) {
     const query = `pageSize=1000${page ? `&pageToken=${encodeURIComponent(page)}` : ''}`;
     const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/models?${query}`, {
-      headers: { 'x-goog-api-key': apiKey }, redirect: 'error', signal: AbortSignal.any([deadline, AbortSignal.timeout(15_000)]),
+      headers: apiKey ? { 'x-goog-api-key': apiKey } : {}, redirect: 'error', signal: AbortSignal.any([deadline, AbortSignal.timeout(15_000), ...(signal ? [signal] : [])]),
     });
     if (!res.ok) throw new Error(`GET /models ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json() as { models?: Array<{ name?: unknown; inputTokenLimit?: unknown; outputTokenLimit?: unknown }>; nextPageToken?: string };
+    if (!data || !Array.isArray(data.models) || data.models.some(row => !row || typeof row !== 'object' || typeof row.name !== 'string' || !row.name.replace(/^models\//, '').trim())) throw new Error('GET /models returned no models array');
     for (const row of data.models ?? []) {
       if (typeof row.name !== 'string') continue;
       const window = typeof row.inputTokenLimit === 'number' ? row.inputTokenLimit : undefined;

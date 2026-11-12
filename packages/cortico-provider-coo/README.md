@@ -60,7 +60,15 @@ Coo Pet Provider:[Cortico](https://github.com/Pal-AI-Lab/Cortico) 的一个 prov
   非中文时豆包、百度千帆、阶跃星辰和阶跃 Step Plan(只收中国大陆账号)放在 `more` 里;`defaultRegion`:中文用国内平台,其余用国际平台。
 - **接入流程**:`src/connect.ts` 的 `connectVendor` 经 Cortico WebUI 的 provider 路由给某一家的某个平台建端点
   (密钥存在该端点 `.env` 的 `Vendor.secret` 下,模型按传入的名字,留空用默认)、测试,通过后设为当前端点并恢复运行;
-  已有端点留空 Key 时沿用存着的。Coopanion 的桌面引导和「开始」页都用它。
+  已有端点留空 Key 时沿用存着的。Coopanion 的桌面引导保留此流程；「开始」页通过公开供应商池接口管理和选择连接。
+- **模型列表接口**:`src/catalog.ts` 提供页 `llm:coo`、面板 `catalog` 的 `models` 方法，参数为
+  `[{ name?, entry, secretValue? }]`，返回 `{ models }`。草稿无需模型名，不保存配置或密钥。
+  已保存端点只有地址、协议和密钥变量未改变时可以留空 Key；改变后需要重新填写。
+  新的无认证端点可不填 Key；`entry.secret` 留空或省略。HTTP 地址遵循现有本机及内网规则，URL 不接受账号密码、查询或片段。
+  `src/models.ts` 与已保存连接共用模型目录实现，单请求限时 15 秒、总计 60 秒，拒绝重定向。
+  `catalog` 同时声明为编辑页自带的模型段落，不需要浏览器面板包。
+- **无认证连接**:未声明 `secret` 且未输入 Key 时，模型目录和生成请求均不发送认证头。Anthropic 与 Gemini
+  声明了 `secret` 却读不到密钥时，在发送生成请求前报错；Anthropic SDK 不从环境或配置文件补取凭据。
 
 ## ChatGPT 套餐(`chatgpt` 模块)
 

@@ -7,6 +7,12 @@ export const cooText: Partial<typeof en> = {
   protocolHint: '未設定のとき、一覧にあるサービスはそれぞれのプロトコルを、それ以外の URL は responses を使います。responses：POST <URL>/responses、chat：POST <URL>/chat/completions、anthropic：Messages API（URL は /v1 より前の部分）、gemini：Gemini API（URL は /models より前の部分）。',
   badProtocol: (protocols: string) => `プロトコルは ${protocols} のいずれかにしてください`,
   httpRemote: "リモートのアドレスは https のみ使えます。http は暗号化されず、API Key と会話が平文で送られます。このコンピューターやローカルネットワークのアドレスは http でもかまいません。",
+  catalog: {
+    invalid: 'モデル一覧の設定が無効です。API URL、プロトコル、API Key を確認してください。',
+    keyRequired: 'API Key を入力してください。URL、プロトコル、キー変数を変更した場合は再入力が必要です。',
+    unsupported: 'このサービスは互換性のあるモデル一覧を提供していません。モデル ID を手動で入力してください。',
+    timeout: 'モデル一覧の取得がタイムアウトしました。再試行してください。',
+  },
   chatgpt: {
     panel: 'ChatGPT アカウント',
     description: 'ChatGPT アカウントでサインインし、リクエストはそのアカウントの ChatGPT プランの利用量に含まれます。',

@@ -40,6 +40,8 @@ function retryable(status: number): boolean {
 export interface ClaudeProviderOptions {
   baseUrl?: string;
   apiKey?: string;
+  /** False for a connection with no secret variable; otherwise a missing key fails before sending. */
+  requiresApiKey?: boolean;
   media?: CompatMediaOptions;
   keepThinking?: () => boolean;
   log?: Logger;
@@ -58,9 +60,23 @@ export class ClaudeProvider extends BaseProvider {
 
   /** The SDK client; the key is checked when the first request needs it. */
   client(): Anthropic {
-    if (!this.opts.apiKey) throw new LLMError('Claude 缺密钥(端点的密钥变量未设置)', 401, '');
-    // a redirect fails the request: the x-api-key header would follow it to the new address
-    this.sdk ??= new Anthropic({ apiKey: this.opts.apiKey, baseURL: this.opts.baseUrl || DEFAULT_BASE_URL, maxRetries: 0, fetch: (url, init) => fetch(url, { ...init, redirect: 'error' }) });
+    if (this.opts.requiresApiKey !== false && !this.opts.apiKey) throw new LLMError('Claude 缺密钥(端点的密钥变量未设置)', 401, '');
+    this.sdk ??= new Anthropic({
+      apiKey: this.opts.apiKey ?? '', authToken: null, webhookKey: null,
+      baseURL: this.opts.baseUrl || DEFAULT_BASE_URL, maxRetries: 0, logLevel: 'off',
+      defaultHeaders: { authorization: null, 'x-api-key': this.opts.apiKey || null },
+      fetch: (url, init) => {
+        const supplied = new Headers(init?.headers);
+        const headers: Record<string, string> = {
+          'content-type': 'application/json', 'anthropic-version': '2023-06-01',
+          ...(this.opts.apiKey ? { 'x-api-key': this.opts.apiKey } : {}),
+        };
+        const beta = supplied.get('anthropic-beta');
+        if (beta) headers['anthropic-beta'] = beta;
+        // SDK environment headers cannot add credentials; redirects never carry this connection's key.
+        return fetch(url, { ...init, headers, redirect: 'error' });
+      },
+    });
     return this.sdk;
   }
 
@@ -115,7 +131,10 @@ export class ClaudeProvider extends BaseProvider {
       };
       try {
         const body = { ...params, ...(betas.length ? { betas } : {}) };
-        const requestOptions = { signal, timeout: streaming ? HEADERS_TIMEOUT_MS.streaming : HEADERS_TIMEOUT_MS.unary };
+        const requestOptions = {
+          signal, timeout: streaming ? HEADERS_TIMEOUT_MS.streaming : HEADERS_TIMEOUT_MS.unary,
+          headers: { 'anthropic-beta': betas.length ? betas.join(',') : null },
+        };
         if (streaming) {
           const { data: stream, response, request_id } = await this.client().beta.messages.create({ ...body, stream: true as const }, requestOptions).withResponse();
           attempt.status = response.status;

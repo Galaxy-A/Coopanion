@@ -18,6 +18,12 @@ const zh = {
   protocolHint: '留空时,列出的服务用它自己的协议,其他地址用 responses。responses:POST <地址>/responses;chat:POST <地址>/chat/completions;anthropic:Messages API,地址填写 /v1 之前的部分;gemini:Gemini API,地址填写 /models 之前的部分。',
   badProtocol: (protocols: string) => `协议只能是 ${protocols}`,
   httpRemote: "远程地址只能用 https:http 不加密，API Key 和对话会明文传输。本机和局域网的地址可以用 http。",
+  catalog: {
+    invalid: '模型列表请求的配置无效，请检查 API 地址、协议和 API Key。',
+    keyRequired: '请填写 API Key；修改连接地址、协议或密钥变量后需要重新填写。',
+    unsupported: '此服务未提供兼容的模型列表，请手动填写模型 ID。',
+    timeout: '获取模型列表超时，请重试。',
+  },
   chatgpt: {
     /** The sign-in section's title in the endpoint editor. */
     panel: 'ChatGPT 账号',
@@ -38,6 +44,12 @@ export const en: typeof zh = {
   protocolHint: 'Unset: a listed service uses its own protocol, any other URL uses responses. responses: POST <URL>/responses; chat: POST <URL>/chat/completions; anthropic: the Messages API, with the URL before /v1; gemini: the Gemini API, with the URL before /models.',
   badProtocol: (protocols: string) => `The protocol must be one of ${protocols}`,
   httpRemote: "A remote address must use https: http is not encrypted, so the API Key and the conversation would travel in plain text. Addresses on this computer or the local network may use http.",
+  catalog: {
+    invalid: 'The model catalog configuration is invalid. Check the API URL, protocol and API Key.',
+    keyRequired: 'Enter an API Key. A changed URL, protocol or secret variable requires a new key.',
+    unsupported: 'This service does not expose a compatible model catalog. Enter the model ID manually.',
+    timeout: 'Fetching the model catalog timed out. Try again.',
+  },
   chatgpt: {
     panel: 'ChatGPT account',
     description: "Signs in with a ChatGPT account; requests count toward that account's ChatGPT plan.",

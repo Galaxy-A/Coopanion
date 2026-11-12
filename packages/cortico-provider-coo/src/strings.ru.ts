@@ -7,6 +7,12 @@ export const cooText: Partial<typeof en> = {
   protocolHint: 'Если не задано, сервис из списка использует свой протокол, а любой другой URL использует responses. responses: POST <URL>/responses; chat: POST <URL>/chat/completions; anthropic: Messages API, URL до /v1; gemini: Gemini API, URL до /models.',
   badProtocol: (protocols: string) => `Протокол должен быть одним из: ${protocols}`,
   httpRemote: "Удалённый адрес должен использовать https: http не шифруется, и API Key вместе с разговором пойдут открытым текстом. Адреса этого компьютера и локальной сети могут использовать http.",
+  catalog: {
+    invalid: 'Недопустимая конфигурация каталога. Проверьте URL API, протокол и API Key.',
+    keyRequired: 'Введите API Key. После изменения URL, протокола или переменной ключа введите ключ повторно.',
+    unsupported: 'Сервис не предоставляет совместимый каталог. Введите ID модели вручную.',
+    timeout: 'Время получения каталога истекло. Повторите попытку.',
+  },
   chatgpt: {
     panel: 'Аккаунт ChatGPT',
     description: 'Вход через аккаунт ChatGPT; запросы учитываются в тарифе ChatGPT этого аккаунта.',
