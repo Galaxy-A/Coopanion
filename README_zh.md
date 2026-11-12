@@ -1,9 +1,9 @@
-<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json, packages/cortico-world-heybox-voice/src/world.ts. -->
-# GhostCompanion 定制 fork
+<!-- Owner: app/main.cjs, core/companion.ts, console/index.ts, console/features/connections/index.ts, app/data-move.cjs, scripts/Start-Companion.ps1, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, integration/install-world.mjs, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json, packages/cortico-world-heybox-voice/src/world.ts, figures/destiny-ghost/figure.js. -->
+# Coopanion
 
 本仓库 fork 自 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)，
 保留上游提交历史，并增加 Codex 活动通知、状态动画和机灵形象适配。
-定制版的安装、使用、功能边界及素材说明见 [GhostCompanion README](README.md)。
+定制版的安装、使用、功能边界及素材说明见 [Coopanion README](README.md)。
 公开仓库不附带私人本地使用的机灵图集。
 
 ## 黑盒语音桥接
@@ -143,7 +143,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companio
 </p>
 
 <p align="center">
-  <a href="README.md">GhostCompanion 定制说明</a> ｜
+  <a href="README.md">Coopanion 定制说明</a> ｜
   简体中文
 </p>
 

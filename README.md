@@ -1,7 +1,7 @@
 <!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json, packages/cortico-world-heybox-voice/src/world.ts. -->
-# GhostCompanion
+# Coopanion
 
-GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
+此仓库是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
 的**非官方定制 fork**，保留上游提交历史，并加入 Codex 活动显示和机灵形象适配。
 
 ## 上游来源与定制范围
@@ -12,7 +12,7 @@ GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/
   通过本地适配补丁运行。
 - 上游功能：桌宠窗口、聊天与聊天记录、模型服务、自定义动作及设置等沿用
   Coopanion 实现，相关代码与贡献归原作者和贡献者。
-- 本地定制：Codex 只读对话桥接、活动通知与状态动画、机灵形象适配，以及
+- 本地定制：Codex 活动 World 扩展、活动通知与状态动画、机灵形象适配，以及
   独立的数据目录、启动和模型配置脚本。
 - 许可与素材：保留上游 `LICENSE` 和许可声明；角色素材的来源及权利说明
   另见本文末尾与 `licenses/`。
@@ -191,7 +191,7 @@ failed（已拦截）和 idle。等待、就绪、失败的通知资格分别为
 隐藏整组；隐藏后显示数量，点击可恢复。整组隐藏独立保存，新通知不会擅自恢复，
 宠物状态仍跟随首条未关闭通知。角标可拖到四个角落，位置会保存。
 Escape 也可收回展开堆叠。聊天使用原有右侧功能入口或双击机灵，不另加重复入口。
-需要输入或阻塞时点击通知回到 Codex；只读桥不提供审批、回复或停止任务按钮。
+需要输入或阻塞时点击通知回到 Codex；此 World 不提供审批、回复或停止任务按钮。
 
 双击机灵和原有聊天窗口仍走 Coopanion 的聊天、聊天记录及模型服务；
 自定义动作继续走原有动作链路。Codex 进度和回复摘要以纯文本展示，不作为模型
@@ -262,7 +262,7 @@ Codex 消息和 Coopanion 聊天共同使用这个桌宠窗口。
 上游构建方式见 `docs/DEVELOPMENT.md`。
 
 ```text
-GhostCompanion/
+Coopanion/
   Start-GhostCompanion.cmd
   Manage-GhostCompanionData.cmd
   Install-GptSovits.cmd
@@ -309,7 +309,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companio
 开发验收可以指定隔离的数据目录及本地调试端口：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companion.ps1 -DataDir .\artifacts\qa-profile -Inspect
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-Companion.ps1 -DataDir .\scratch\qa-profile -Inspect
 ```
 
 正常启动不开放调试端口。尚未填入有效模型服务时，只能验收界面、
