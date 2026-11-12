@@ -24,6 +24,7 @@ const upstream = {
   'src/server.ts': '28cd6f71b973b1dbc1b243869730353da99e585f8e70e74ebe08f9bd5e6c7b02',
   'web/pet-app.js': '0fbe37943722e9ab0a5aef14cfca8fb52ac8001c1c01674d1723a87dfca4b62f',
   'web/pet.css': '10e65a10157f3da1e11f9d84200381eb2d92b4c9f0343c08ded016c6a3082c37',
+  'web/body-host.js': 'd85634d0fb3c415fe6eabc80b48cd0a70f8f450849e1be648bc1898d1a3b9bce',
   'host/electron-main.cjs': '3a7f23920fa4a3d9ec28f5e382a198b9449f57514556db495cb8b8e57a39cb9e',
   'core/guide.ts': '51e71354bec2b1d87fb0df89007f9dd89f381a133b561f2107d49e129c717d7f',
 };
@@ -37,7 +38,7 @@ async function plan(file, after, key, accepted = []) {
   }
   writes.push({ file, before, after });
 }
-for (const name of ['src/server.ts', 'src/display.ts', 'src/asr.ts', 'web/pet-app.js', 'web/pet.css', 'web/displays.js', 'host/electron-main.cjs']) {
+for (const name of ['src/server.ts', 'src/display.ts', 'src/asr.ts', 'web/pet-app.js', 'web/pet.css', 'web/body-host.js', 'web/displays.js', 'host/electron-main.cjs']) {
   await plan(join(pet, name), await readFile(join(project, 'packages/cortico-world-desktop-pet', name)),
     `pet/${name}`, [upstream[name], legacy[name]]);
 }

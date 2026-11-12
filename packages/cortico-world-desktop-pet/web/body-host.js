@@ -116,7 +116,7 @@ export function knownScheme(pack, scheme) {
 }
 
 /**
- * `pack`: the entry of `/api/figures`; `start`: { x, facing, enter, skin }; `bounds`: { W, H, floorY, S };
+ * `pack`: the entry of `/api/figures`; `start`: { x, y?, facing, enter, skin }; `bounds`: { W, H, floorY, S };
  * `theme`: 'dark' | 'light'. Resolves to the body once it is ready.
  */
 export function loadBody({ layer, pack, start, theme, bounds, onEvent, onSound, onError }) {
@@ -217,7 +217,7 @@ export function loadBody({ layer, pack, start, theme, bounds, onEvent, onSound, 
           const model = pack.model ? await (await fetch(new URL(pack.base + pack.model, location.href))).json() : null;
           post({
             t: 'init', entry: new URL(pack.base + pack.entry, location.href).href, export: pack.export,
-            base: new URL(pack.base, location.href).href, model, scheme: knownScheme(pack, start.scheme), start: { x: start.x, facing: start.facing, enter: start.enter, skin: start.skin }, theme, bounds: size,
+            base: new URL(pack.base, location.href).href, model, scheme: knownScheme(pack, start.scheme), start: { x: start.x, ...(typeof start.y === 'number' ? { y: start.y } : {}), facing: start.facing, enter: start.enter, skin: start.skin }, theme, bounds: size,
             language: language(),
           });
         } catch (err) { fail(err); }
