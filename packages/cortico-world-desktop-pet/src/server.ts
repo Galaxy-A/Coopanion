@@ -39,6 +39,7 @@ import { packFile, type FigurePack, type PackProblem } from './packs.ts';
 import { BUNDLE_TYPE, IMPORT_LARGE, PACK_DEPTH, filesFromBundle, filesFromZip, type PackImporter } from './pack-import.ts';
 import { petText, type PetText } from './i18n/index.ts';
 import type { SpeechUnit } from './speech/index.ts';
+import { petDisplays, watchPetDisplays } from './display.ts';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -110,6 +111,7 @@ export class PetServer {
   /** What the source was last told. */
   private overlayTold: boolean | null = null;
   private boundPort = 0;
+  private unwatchDisplays: (() => void) | null = null;
   private readonly windowKey = randomUUID();
 
   constructor(private readonly opts: PetServerOptions) {}
@@ -170,12 +172,21 @@ export class PetServer {
         }
         this.wss!.handleUpgrade(req, socket, head, (ws) => this.accept(ws, req));
       });
+      this.unwatchDisplays = watchPetDisplays((id) => {
+        if (!this.petInWindow) return;
+        const display = id && petDisplays().find((item) => item.id === id);
+        this.sendPet(display
+          ? { t: 'pet-display', id: display.id, snapshot: display.snapshot() }
+          : { t: 'pet-displays', displays: this.displayCatalog() });
+      });
       return this.boundPort;
     }
     throw new Error(this.t.portsTaken(base, base + PORT_ATTEMPTS - 1, lastErr?.message ?? ''));
   }
 
   async stop(): Promise<void> {
+    this.unwatchDisplays?.();
+    this.unwatchDisplays = null;
     for (const ws of [this.pet, ...this.dressers, this.overlaySource, ...this.overlayViewers]) ws?.close();
     this.pet = null;
     this.dressers.clear();
@@ -240,6 +251,7 @@ export class PetServer {
     if (params.get('role') === 'overlay-source') return this.acceptOverlaySource(ws);
     if (params.get('role') === 'overlay') return this.acceptOverlayViewer(ws);
     ws.send(JSON.stringify({ t: 'init', ...this.opts.snapshot() }));
+    if (fromWindow) ws.send(JSON.stringify({ t: 'pet-displays', displays: this.displayCatalog() }));
     // the pet window outranks a browser tab: a tab opened while the window is connected only watches
     const watcher = params.get('role') !== 'pet' || (!fromWindow && this.petConnected && this.petIsWindow);
     if (!watcher) {
@@ -256,7 +268,13 @@ export class PetServer {
           return;
         }
         const msg = parse(data.toString());
-        if (msg) this.opts.onPetMessage(msg);
+        if (msg?.t === 'pet-display') {
+          if (fromWindow) {
+            const display = petDisplays().find((item) => item.id === msg.id);
+            void Promise.resolve().then(() => display?.onAction?.(msg.action))
+              .catch((error) => console.error('Pet display action failed', error));
+          }
+        } else if (msg) this.opts.onPetMessage(msg);
       });
       ws.on('close', () => {
         if (this.pet !== ws) return;
@@ -305,6 +323,13 @@ export class PetServer {
     if (!this.allowed(req, req.method !== 'GET' && req.method !== 'HEAD')) { res.writeHead(421).end(); return; }
     const url = new URL(req.url ?? '/', 'http://x');
     const path = url.pathname;
+    if (req.method === 'GET' && path.startsWith('/displays/')) {
+      const [, , id, name, ...rest] = path.split('/');
+      const display = petDisplays().find((item) => item.id === id);
+      const file = display && Object.hasOwn(display.files, name ?? '') ? display.files[name] : null;
+      if (!file || rest.length) { res.writeHead(404).end(); return; }
+      return this.sendFile(res, file, null);
+    }
     if (req.method === 'GET' && path === '/api/figures') {
       const importer = this.opts.importer;
       return json(res, 200, (this.opts.packs?.() ?? []).map((pack) => {
@@ -384,6 +409,12 @@ export class PetServer {
     if (!full.startsWith(root)) { res.writeHead(403).end(); return; }
     if (PAGES[path]) return this.sendPage(res, full);
     return this.sendFile(res, full, null, path.startsWith('/web/') && req.headers.origin === 'null');
+  }
+
+  private displayCatalog(): unknown[] {
+    return petDisplays().map((display) => ({
+      id: display.id, entry: `/displays/${display.id}/${display.entry}`, snapshot: display.snapshot(),
+    }));
   }
 
   /** A page, its `<html lang>` set to the app language (`zh` as `zh-CN`). */

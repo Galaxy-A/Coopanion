@@ -1,4 +1,4 @@
-<!-- Owner: src/definition.ts, src/webui/client.ts, src/cua/cua.ts, src/cua/engine/user-activity.ts, src/cua/engine/wait-idle.ts, src/cua/engine/foreground.ts, src/world.ts, src/asr/hotkey.ts, src/asr/system-recognizer.ts, src/asr/transcription-api.ts, web/mic.js, host/app-store.cjs -->
+<!-- Owner: src/definition.ts, src/webui/client.ts, src/cua/cua.ts, src/cua/engine/user-activity.ts, src/cua/engine/wait-idle.ts, src/cua/engine/foreground.ts, src/world.ts, src/display.ts, src/asr.ts, src/server.ts, src/asr/hotkey.ts, src/asr/system-recognizer.ts, src/asr/transcription-api.ts, web/mic.js, web/displays.js, host/app-store.cjs -->
 
 <p align="center">
   <picture>
@@ -17,6 +17,10 @@ bot 在屏幕底边有一个小身体,由一个形象包提供(见下文):内置
 把它拎起来甩出去,这些都作为事件送回 bot。开了电脑操作时,bot 还能看屏幕、动鼠标键盘(见「电脑操作」)。
 
 ## 工具
+
+其他扩展可通过 `cortico-world-desktop-pet/asr` 复用 `SherpaAsr`、`SENSEVOICE`、
+`Segmenter`、`looksHallucinated` 和 `RuntimeStore`。这些库导出不启动桌宠 World，
+调用方管理自己的音频采集、识别器生命周期与事件。
 
 | 工具 | 作用 | 回执 |
 |---|---|---|
@@ -571,6 +575,35 @@ macOS 的辅助功能查询每次最多等待 200ms,超时后仍报告前台程�
 `controls.guide` 借出后,控制台的 `pet.guide` 面板方法会调它,应用借此重放引导。
 `/api/config` 写不了列表和对象,所以「习惯」页的两个自定义弹窗经 `pet` 面板方法保存:`setWakeKinds(种类数组)` 把 `touch.wakeOn` 设成 `custom` 并写 `touch.wakeKinds`,
 `setSelfAdjustCustom({ 项: true/false })` 把 `selfAdjust` 设成 `custom` 并写 `selfAdjustCustom`;`pet.state` 的 `wake`、`selfAdjust` 给出当前值(旧的布尔值已按新含义读出)。
+
+### World 显示接口
+
+本机已安装的 World 可从 `cortico-world-desktop-pet/display` 导入
+`registerPetDisplay()`，在现有桌宠窗口中注册显示。扩展脚本以桌宠页面的权限执行，
+仅用于已受信任的本机扩展。注册对象包含唯一的 `id`、具名文件表 `files`、入口名
+`entry`、当前数据函数 `snapshot()` 和可选的 `onAction(action)`。服务仅提供
+`files` 明确列出的文件；入口名必须在表内，文件名不含目录分隔符。
+
+`registerPetDisplay()` 返回 `publish()` 和 `dispose()`：数据变化时调用前者，
+World 的 `stop()` 调用后者移除显示并停止提供资源。World 同时负责停止自己的
+文件监听、轮询及连接。显示数据只发送给带窗口凭据的桌宠连接，预览页不接收；
+`onAction` 也仅接受该窗口的消息。
+
+入口模块导出 `createDisplay(context)`，返回以下成员：
+
+| 成员 | 契约 |
+|---|---|
+| `receive(snapshot)` | 接收当前数据，包括加载期间到达的最新一份 |
+| `merge(state)` | 返回要传给形象的状态，保留原有状态字段 |
+| `step({ blocked, enabled })` | 接收聊天占用和状态显示开关 |
+| `layout(position)` | 接收当前形象的布局与气泡锚点 |
+| `elements` | 当前显示元素，供窗口命中区域与遮挡计算使用 |
+| `dispose()` | 删除元素、样式和全局监听；异步加载失效时不得重新挂载 |
+
+`context` 提供 `bubble`、`body()`、`nativeState()`、`icons`、`requestFocus()`、
+`language()` 以及 `send(action)`。动作由宿主转交该注册项的 `onAction`；显示接口
+本身不创建聊天事件。页面语言改变时，宿主释放并重新创建显示，传入最近数据。
+Codex 实现见相邻的 `cortico-world-codex-activity` 包。
 
 ### 对话页
 

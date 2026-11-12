@@ -21,6 +21,7 @@ import { accentColors, announcePainted, bubbleCss, dressFloor, glowColor, lightW
 import { bindAppearance } from './appearance.js';
 import { createMic } from './mic.js';
 import { runFrames } from './frame-loop.js';
+import { createDisplays } from './displays.js';
 
 const $ = (s) => document.querySelector(s);
 const host = window.petHost || null;
@@ -95,6 +96,8 @@ let body = null, words = new Map(), T = 0;
 const at = () => body?.layout ?? null;
 /** What the body is told of the page: talking orders hold its roaming off, and these states. */
 const bodyState = { listening: false, thinking: false, thoughtShown: true, dialogOpen: false, still: false, status: null };
+const displays = createDisplays({ bubble, body: () => body, nativeState: () => bodyState, icons: ICONS,
+  requestFocus: () => host?.focus?.(), send, language });
 const holdRoam = (seconds) => body?.set({ hold: seconds });
 host?.onFloor?.((px) => { below = px; body?.set({ bounds: bounds() }); });
 // the window reads the windows on its display only while the body on screen asks for them (`watchWindows`)
@@ -121,6 +124,7 @@ function connect() {
     talkKeyDown = false;
     // the World gave up on these steps when the page went; it asks again once the page is back
     dropDialogs();
+    displays.disconnect();
     setStatus(null);
     if (e.code === 4000 && !host) return;
     setTimeout(connect, backoff);
@@ -148,7 +152,7 @@ function overlayRect() {
   const reach = (shownPack?.effects?.reach ?? 0) * 256 * bounds().S;
   const side = Math.max(24, .4 * b.w, reach), top = Math.max(48, b.h, reach);
   const parts = [{ x: b.x - side, y: b.y - top, width: b.w + 2 * side, height: b.h + top + side }];
-  for (const el of [bubble, ...lines.map((l) => l.el)]) if (!el.hidden) parts.push(rectOf(el));
+  for (const el of [bubble, ...displays.elements, ...lines.map((l) => l.el)]) if (!el.hidden) parts.push(rectOf(el));
   const x = Math.max(0, Math.min(...parts.map((r) => r.x))), y = Math.max(0, Math.min(...parts.map((r) => r.y)));
   const right = Math.min(innerWidth, Math.max(...parts.map((r) => r.x + r.width))), bottom = Math.min(innerHeight, Math.max(...parts.map((r) => r.y + r.height)));
   return right > x && bottom > y ? { x, y, width: right - x, height: bottom - y } : null;
@@ -210,7 +214,7 @@ async function swapBody(s) {
   });
   if (wanted !== s.figure) { next.dispose(); return; }
   holder.body = next;
-  next.set({ roam: prefs.roam, ...bodyState });
+  next.set({ roam: prefs.roam, ...displays.merge(bodyState) });
   body?.dispose();
   body = next;
   host?.watchWindows?.(next.needsWindows);
@@ -318,6 +322,7 @@ async function switchLanguage(code) {
 
 function onOrder(m) {
   switch (m.t) {
+    case 'pet-displays': case 'pet-display': displays.receive(m); break;
     case 'init': restorePosition(m.startX, m.startY); applyPrefs(m); if (!host) announcePainted(); break;
     case 'prefs': applyPrefs(m); break;
     case 'watching': watching = true; stopMic(); break;
@@ -348,7 +353,7 @@ function onOrder(m) {
 function setBody(change) {
   if (Object.entries(change).every(([k, v]) => bodyState[k] === v)) return;
   Object.assign(bodyState, change);
-  body?.set(change);
+  body?.set(displays.merge(bodyState));
 }
 
 /* ---------- body events → World ---------- */
@@ -1148,6 +1153,7 @@ function drawStatus(next, pop) {
   if (pop) { bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop'); }
 }
 function stepStatus() {
+  displays.step({ blocked: !!(listen.phase || item || queue.length || status.wanted), enabled: prefs.statusBubble });
   // Never replace dialogue with activity, including while a queued line waits for the body.
   if (!prefs.statusBubble || listen.phase || item || queue.length) {
     if (bubble.classList.contains('status')) bubble.hidden = true;
@@ -1798,7 +1804,7 @@ function writePointer(now) {
 }
 
 // the menu itself covers the whole page without taking clicks; its two columns are what can be pointed at
-const UI_SELECTOR = '.bubble:not(.status):not(.fading):not([hidden]), .menu:not([hidden]):not(.leaving) > *, .tools:not([hidden]):not(.leaving), .wheel:not([hidden]):not(.leaving)';
+const UI_SELECTOR = '[data-pet-display]:not([hidden]), .bubble:not(.status):not(.fading):not([hidden]), .menu:not([hidden]):not(.leaving) > *, .tools:not([hidden]):not(.leaving), .wheel:not([hidden]):not(.leaving)';
 const overUi = (e) => e.target.closest && e.target.closest(UI_SELECTOR);
 
 /**
@@ -2047,6 +2053,7 @@ function layout(dt = 0) {
   if (!bubble.hidden && item?.pinX !== undefined) sayBox = placeTalk(item, a);
   else if (!bubble.hidden) sayBox = place(bubble, a, 18 * prefs.bubbleSize);
   placeLines(a, sayBox, dt);
+  displays.layout(l);
 }
 
 /** From Coo's head to the newest line's bottom edge, and between lines, in pixels at bubble size 1. */
@@ -2122,7 +2129,7 @@ async function probeBackdrop() {
   const near = inflate({ x: b.x, y: b.y, width: b.w, height: b.h }, Math.max(4 + 34 * S, 4 + 2 * prefs.glow)), far = inflate(near, 8 + 40 * S);
   const x = Math.max(0, far.x), y = Math.max(0, far.y);
   const rect = { x, y, width: Math.min(innerWidth, far.x + far.width) - x, height: Math.min(innerHeight, far.y + far.height) - y };
-  const covers = [bubble, ...(menu.hidden ? [] : menu.children), tools, wheel, ...lines.map((l) => l.el)].filter((el) => !el.hidden).map((el) => shadowed(rectOf(el)));
+  const covers = [bubble, ...displays.elements, ...(menu.hidden ? [] : menu.children), tools, wheel, ...lines.map((l) => l.el)].filter((el) => !el.hidden).map((el) => shadowed(rectOf(el)));
   const px = await host.sampleBackdrop(rect, [near, ...covers]);
   // this platform cannot read the screen cheaply: the halo just stays
   if (px === null) { backdrop.on = true; backdrop.fixed = true; return; }

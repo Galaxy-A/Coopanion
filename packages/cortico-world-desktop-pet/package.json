@@ -30,6 +30,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./display": "./src/display.ts",
+    "./asr": "./src/asr.ts",
     "./web/*": "./web/*",
     "./webui/key-capture.ts": "./src/webui/key-capture.ts",
     "./host/*": "./host/*"
