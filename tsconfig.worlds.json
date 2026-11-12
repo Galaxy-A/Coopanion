@@ -3,6 +3,7 @@
   "compilerOptions": { "lib": ["ES2022", "DOM", "DOM.Iterable"] },
   "include": [
     "packages/cortico-world-codex-activity/src/**/*.ts",
+    "packages/cortico-world-heybox-voice/src/**/*.ts",
     "packages/cortico-world-desktop-pet/src/**/*.ts",
     "packages/cortico-world-desktop-pet/tests/**/*.ts"
   ],

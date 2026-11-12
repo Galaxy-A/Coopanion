@@ -1,0 +1,53 @@
+.heybox-bridge {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.heybox-bridge label {
+  display: grid;
+  gap: 6px;
+}
+
+.heybox-bridge label > .field {
+  width: 100%;
+  min-width: 0;
+}
+
+.heybox-bridge textarea {
+  resize: vertical;
+}
+
+.heybox-bridge .actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.heybox-bridge > p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.heybox-bridge .heybox-checklist {
+  display: grid;
+  grid-template-columns: minmax(100px, auto) minmax(0, 1fr);
+  gap: 8px 20px;
+  margin: 0;
+}
+.heybox-checklist dd { margin: 0; overflow-wrap: anywhere; }
+.heybox-ready { color: var(--green, #24834c); }
+.heybox-setup { min-width: 0; }
+.heybox-setup[open] > * + * { margin-top: 12px; }
+.heybox-setup summary { cursor: pointer; font-weight: 600; }
+.heybox-setup p { line-height: 1.6; margin-bottom: 0; }
+.heybox-bridge meter { width: 100%; height: 12px; }
+.heybox-reception { display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.heybox-reception p { margin: 0; line-height: 1.6; }
+.heybox-microphone { display: grid; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
+.heybox-microphone p { margin: 0; line-height: 1.6; }
+.heybox-bridge [hidden] { display: none; }
+.heybox-transcript { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .heybox-bridge .heybox-checklist { grid-template-columns: 1fr; gap: 4px; }
+  .heybox-checklist dd { margin-bottom: 8px; }
+}

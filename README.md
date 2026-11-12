@@ -1,4 +1,4 @@
-<!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json. -->
+<!-- Owner: scripts/Start-Companion.ps1, integration/install-world.mjs, figures/destiny-ghost/figure.js, console/features/connections/index.ts, app/data-move.cjs, scripts/Sync-GhostCompanionRuntime.ps1, scripts/Data-Location.ps1, scripts/Manage-Data.ps1, scripts/build-console.mjs, core/guide.ts, packages/cortico-world-codex-activity/src/world.ts, packages/cortico-world-codex-activity/web/view.js, packages/cortico-world-desktop-pet/host/electron-main.cjs, scripts/Install-GptSovits.ps1, project.json, packages/cortico-world-heybox-voice/src/world.ts. -->
 # GhostCompanion
 
 GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
@@ -63,6 +63,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-GptSov
 `pet_say` 显示同一句话；`pet_ask` 问句不朗读。声音默认在本机播放，音色、
 语言、语速和模型都在 GPTSovits World 页面调整。Coopanion 的聊天记录、模型
 请求和自定义动作继续走原有 World 链路。
+
+## 黑盒语音桥接
+
+`packages/cortico-world-heybox-voice` 提供独立的「黑盒语音」World，ID 为 `heybox`。
+它通过现有 GPT-SoVITS HTTP 接口取得语音，混入当前实体麦克风，或播放到指定的 Windows 输出设备；
+接收通过 Windows 按进程采集黑盒及其子进程的音频，识别后投递 `heybox.speech`。
+房间回复使用 `heybox_say`，一次完成 GPT-SoVITS 合成和黑盒送音；本地桌面对话仍使用 `sovits_speak`，不会因开启桥接就全部发到房间。
+首次点击「配置黑盒语音」，按引导选择当前麦克风免费组件或已有发送虚拟线路，并在黑盒选择一次对应的麦克风。
+完成收发检查后，以后直接点击「开始桥接」。配置和使用说明见
+[黑盒语音扩展说明](packages/cortico-world-heybox-voice/README_zh.md)。
+面板「称呼关键词」可自定义名字或短语，保存后立即生效；转写包含时向 Core 标记称呼线索，其他房间对话仍保留为上下文。
+「当前麦克风（免费组件）」通过 Equalizer APO 和自有插件混入原麦克风，不需要购买软件。该路线作用于整个麦克风端点，其他同时使用此麦克风的录音应用也可能收到合成声音。首次安装与启用需要管理员确认，并在官方设备选择器中选择一次麦克风；已有 CABLE 配置保留为可选路线。
 
 ## 模型供应商
 

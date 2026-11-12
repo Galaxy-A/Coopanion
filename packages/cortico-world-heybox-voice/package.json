@@ -1,0 +1,23 @@
+{
+  "name": "cortico-world-heybox-voice",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "HeyBox voice bridge with free microphone mixing or an explicit output-device route through GPT-SoVITS HTTP",
+  "license": "AGPL-3.0-or-later",
+  "keywords": ["cortico-world", "cortico"],
+  "os": ["win32"],
+  "engines": { "node": ">=22" },
+  "main": "./src/index.ts",
+  "peerDependencies": { "cortico-world-desktop-pet": ">=0.2.0" },
+  "peerDependenciesMeta": { "cortico-world-desktop-pet": { "optional": true } },
+  "devDependencies": { "cortico-world-desktop-pet": "workspace:*" },
+  "files": ["src", "native", "web", "README.md", "README_zh.md", "describe.json"],
+  "cortico": {
+    "kind": "world",
+    "api": 6,
+    "displayName": "HeyBox Voice",
+    "describe": "describe.json",
+    "webUiClient": "web/panel.js",
+    "webUiStyle": "web/panel.css"
+  }
+}
