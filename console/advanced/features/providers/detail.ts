@@ -12,6 +12,7 @@ import { S } from './strings.ts';
 import { CHATGPT_TEXT, accountRow, signOutBeforeDelete } from '../../../features/chatgpt/index.ts';
 import { CHATGPT_MODULE } from 'cortico-provider-coo/src/vendors.ts';
 import { SIGN_IN_PANEL } from 'cortico-provider-coo/src/connect.ts';
+import { S as POOL_TEXT } from '../../../features/connections/strings.ts';
 
 export interface DetailController { dispose(): void; }
 interface Options {
@@ -62,9 +63,18 @@ export async function mountDetail(options: Options): Promise<DetailController> {
     void work().catch(error => { if (!lifecycle.disposed) problem(source, String(error)); });
   };
   /** Preview name for an unsaved connection; the server resolves secrets by it. */
-  const identity = saved?.name ?? 'draft';
+  const identity = saved?.name ?? `draft-${crypto.randomUUID()}`;
   /** The probe and the model list run on what the form holds, key included, before anything is saved. */
-  const draftBody = () => ({ entry: editing.entry, ...(editing.secretValue ? { secretValue: editing.secretValue } : {}) });
+  const credentialChanged = () => !!saved && !!editing.entry.secret && (
+    editing.entry.baseUrl !== saved.entry.baseUrl || editing.entry.secret !== saved.entry.secret
+    || editing.entry.options?.protocol !== saved.entry.options?.protocol
+    || editing.entry.options?.endpointPath !== saved.entry.options?.endpointPath
+  );
+  const draftBody = () => {
+    const key = editing.secretValue.trim();
+    if (credentialChanged() && !key) throw new Error(POOL_TEXT.changedAddress);
+    return { entry: structuredClone(editing.entry), ...(key ? { secretValue: key } : {}) };
+  };
   const disposePanels = () => { for (const handle of panelHandles.splice(0)) handle.dispose(); };
   function field(body: HTMLElement, key: string, label: string, value: string, set: (value: string) => void, validate?: (value: string) => string | null, type = 'text') {
     const input = ui.input({ value, type: type as 'text' }); input.setAttribute('aria-label', label);
@@ -128,6 +138,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
     const testResult = ui.msgline();
     const test = ui.button(S.test, { onClick: () => void (async () => {
       test.disabled = true;
+      form.toggleAttribute('inert', true);
       testResult.textContent = '';
       try {
         const result = await post<{ ok: boolean; status: number | null; elapsedMs: number; model?: string; error?: string; hint?: string }>(connectionPath(identity) + '/test', draftBody(), opts);
@@ -137,7 +148,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
       } catch (error) {
         if (lifecycle.disposed) return;
         problem(test, `${S.testFailed}: ${String(error)}`);
-      } finally { test.disabled = false; }
+      } finally { test.disabled = false; form.toggleAttribute('inert', false); }
     })() });
     const testRow = ui.rowbar(); testRow.classList.add('connection-test'); testRow.append(test, testResult);
     if (saved?.readiness.reason) testRow.append(ui.msgline(saved.readiness.reason, true));
@@ -173,6 +184,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
     const fetchResult = ui.msgline();
     const fetch = ui.button(S.fetchModels, { onClick: () => void (async () => {
       fetch.disabled = true;
+      form.toggleAttribute('inert', true);
       fetchResult.textContent = '';
       fetchResult.classList.remove('bad');
       try { const result = await post<{ models: ListedModel[] }>(connectionPath(identity) + '/models', draftBody(), opts);
@@ -184,7 +196,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
         noteCatalog();
       } catch (error) {
         if (!lifecycle.disposed) problem(fetch, String(error));
-      } finally { fetch.disabled = false; }
+      } finally { fetch.disabled = false; form.toggleAttribute('inert', false); }
     })() });
     const fetchRow = ui.rowbar(); fetchRow.classList.add('connection-test'); fetchRow.append(fetch, picker, fetchResult); body.append(fetchRow);
     const tiers = module.reasoningTiers;
@@ -279,7 +291,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
         onChange: kind => {
           const module = modules.find(module => module.id === kind);
           editing.entry = { kind, baseUrl: module?.defaultBaseUrl ?? '', spec: { model: '', thinking: module?.reasoningTiers[0]?.thinking ?? true, ...(module?.reasoningTiers[0]?.effort ? { reasoningEffort: module.reasoningTiers[0].effort } : {}) } };
-          editing.raw = {}; change(); run(render);
+          editing.secretValue = ''; editing.raw = {}; change(); run(render);
         } });
       select.setAttribute('aria-label', S.module);
       const moduleField = ui.field(S.module + ' *', select);
@@ -361,6 +373,7 @@ export async function mountDetail(options: Options): Promise<DetailController> {
   }
   async function save(source: HTMLElement, select = true): Promise<boolean> {
     if (saving) return false;
+    if (credentialChanged() && !editing.secretValue.trim()) { problem(source, POOL_TEXT.changedAddress); return false; }
     const valid = [...errors.values()].map(check => check()).every(Boolean); change();
     if (!valid) {
       for (const input of form.querySelectorAll('[aria-invalid="true"]')) { const fold = input.closest('details'); if (fold) fold.open = true; }
@@ -368,13 +381,16 @@ export async function mountDetail(options: Options): Promise<DetailController> {
       problem(source, S.readiness.invalid); return false;
     }
     saving = true;
+    form.toggleAttribute('inert', true);
     try {
-      const result = await post<Detail>(saved ? connectionPath(saved.name) + '/save' : '/api/providers', { name: editing.name, entry: editing.entry, expectedRevision: editing.revision, copyFrom: editing.copyFrom, ...(editing.secretValue ? { secretValue: editing.secretValue } : {}) }, opts);
+      const result = await post<Detail>(saved ? connectionPath(saved.name) + '/save' : '/api/providers', { name: editing.name, entry: editing.entry, expectedRevision: editing.revision, copyFrom: editing.copyFrom, ...(editing.secretValue.trim() ? { secretValue: editing.secretValue.trim() } : {}) }, opts);
       await options.onSaved(result.name, select); return true;
     } catch (error) { problem(source, String(error)); return false; }
-    finally { saving = false; }
+    finally { saving = false; form.toggleAttribute('inert', false); }
   }
   const dispose = () => { lifecycle.dispose(); disposePanels(); panelHost?.unmount(); };
+  ctx.signal.addEventListener('abort', dispose, { once: true, signal: lifecycle.signal });
+  if (ctx.signal.aborted) { dispose(); return { dispose }; }
   try { await render(); change(); }
   catch (error) { dispose(); throw error; }
   return { dispose };

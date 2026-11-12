@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./advanced/features/prompts/prompts.css";
 @import "./features/cost/cost.css";
+@import "./features/connections/connections.css";
 @import "../shared/ui/problem.css";
 @import "../shared/ui/modal.css";
 @import "../packages/cortico-world-desktop-pet/src/webui/dress-dialog.css";

@@ -3,8 +3,8 @@
  * API (tests/console-api.test.ts locks the routes). The Electron main process serves this build
  * under `/coopanion/` on Core's own origin (app/main.cjs), so requests and WebSockets are same-origin.
  *
- * Normal mode includes pet pages, prompts, usage, chat and World extensions with their pages.
- * Advanced mode also lists model providers, Persona, Memory and diagnostics. Manifest pages mount
+ * Normal mode includes pet pages, model connections, prompts, usage, chat and World extensions with their pages.
+ * Advanced mode also lists Persona, Memory and diagnostics. Manifest pages mount
  * through the panel contract. Switching modes filters the rail and keeps the open page.
  *
  * The colour scheme is painted from the last record this window saw before anything renders, then
@@ -72,7 +72,7 @@ export const ENTRIES: readonly Entry[] = [
   fromPage(homePage), fromPage(petPage), fromPage(dressPage), fromPage(voicePage),
   fromFeature(promptsFeature, 'primary', true), fromPage(usagePage), fromPage(chatPage),
   // 模型供应商 keeps the providers page's own name
-  fromFeature(providersFeature, 'integrations'),
+  fromFeature(providersFeature, 'integrations', true),
   fromFeature(traceFeature, 'diagnostics'), fromFeature(coreFeature, 'diagnostics'),
   fromFeature(worldsFeature, 'world-root', true),
 ];
@@ -156,6 +156,10 @@ export function boot(doc: Document = document): Disposable {
     mode = next;
     writeMode(mode);
     rail.setMode(mode, true);
+    if (mounted?.route === providersFeature.route) {
+      const entry = ENTRIES.find((entry) => entry.route === providersFeature.route)!;
+      mount(entry, router.route);
+    }
     // the page open now stays, even one the normal mode does not list; the next page picked is checked as usual
   };
   onModeRequest(setMode, life.signal);

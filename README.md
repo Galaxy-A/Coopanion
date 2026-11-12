@@ -1,4 +1,4 @@
-<!-- Owner: scripts/Start-Companion.ps1, integration/codex-bridge.mjs, integration/codex-view.js, figures/destiny-ghost/figure.js. -->
+<!-- Owner: scripts/Start-Companion.ps1, integration/codex-bridge.mjs, integration/codex-view.js, figures/destiny-ghost/figure.js, console/features/connections/index.ts. -->
 # GhostCompanion
 
 GhostCompanion 是基于 [Pal AI Lab / Coopanion](https://github.com/Pal-AI-Lab/Coopanion)
@@ -41,14 +41,29 @@ codex/destiny-ghost/spritesheet.png
 托盘菜单可打开设置、显示或隐藏宠物、退出程序。
 运行时的窗口标题保留上游名称 `Coopanion`。
 
-首次使用需要配置自己的模型服务。先从托盘菜单退出应用，
-再双击 `Configure-Model.cmd`，输入服务地址、模型名与 API Key，
-完成后双击启动入口。
-密钥通过 Windows 当前用户 DPAPI 加密保存，启动时仅传给应用子进程，
-不写入源码、形象包、聊天记录或 `.env`。不要将密钥发到聊天中。
+## 模型供应商
 
-应用中也有上游自带的模型设置页面；该页面的密钥存储由上游管理，
-不应将它与本项目配置入口的 DPAPI 加密保存混为一谈。
+首次使用可直接从托盘打开设置，在「开始 → 连接模型」或普通模式的
+「模型供应商 → 供应商池」添加连接。两个入口使用同一份供应商池，
+显示已保存的连接、当前模型和运行状态。
+
+「添加供应商」支持服务预设和自定义服务，API 协议可选 OpenAI Responses、
+Chat Completions、Anthropic Messages 和 Gemini。粘贴完整请求地址时，
+会按所选协议移除 `/responses`、`/chat/completions`、`/v1/messages` 或 Gemini
+请求尾路径，并显示最终请求地址。点击「获取模型」后可搜索并选择模型，
+也可以直接填写模型 ID。
+
+「保存」只写入连接配置。「保存并使用」会保存并启用连接，池中的
+「使用并开始」会切换到该连接并继续运行；「测试连接」单独检查连通性。
+编辑连接时，API Key 留空会保留已保存的密钥；更改地址或协议后必须重新填写
+密钥，或选择「无需密钥」。温度与计价在编辑窗口的「更多配置」中。
+高级模式可在同一供应商池中添加和编辑第三方供应商模块，包括模块协议配置。
+
+应用页面保存的 API Key 由 Cortico 写入数据目录的
+`home\providers\<供应商名称>\.env`，其中的值为明文。命令行备选入口
+`Configure-Model.cmd` 需要先从托盘退出应用，配置完成后再启动；它的密钥通过
+Windows 当前用户 DPAPI 加密保存，启动时仅传给应用子进程，不写入 `.env`。
+两种入口的密钥存储方式各自独立。不要将密钥发到聊天中。
 本项目不会读取或复用 Codex 的登录凭证。
 命令行的 `-NoApiKey` 仅适用于本机回环地址上的 Responses／Chat 服务；
 Anthropic／Gemini 协议仍需密钥。
